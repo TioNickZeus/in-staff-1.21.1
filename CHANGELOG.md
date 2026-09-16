@@ -24,3 +24,11 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Standardized offline player lookups via `server.getProfileCache()` and `UUIDUtil.createOfflinePlayerUUID(name)`.
 - Specified offline ban evasion mitigations combining IP tracking and client-side installation token binding.
 - Updated `ROADMAP.md` with offline mode milestone deliverables.
+
+### Added (Batch 1: Core Utilities, Config & Localization)
+- Implemented comprehensive server-authoritative configuration specification in `InStaffConfig.java` with defensive accessors (`SPEC.isLoaded()`).
+- Added `LocalizationHelper.java` supporting graceful fallback, prefixing, safe argument sanitization, and raw string translation.
+- Added foundational localization keys in `en_us.json` and `pt_br.json`.
+- Implemented `DurationParser.java` supporting monotonic time (`Util.getMillis()`), permanent durations, units (`s`, `m`, `h`, `d`, `w`, `mo`, `y`), composite strings, and duration formatting.
+- Implemented `TextUtil.java` with color code translation (`&` to `§`), formatting stripping, epoch formatting, and safe identity formatting.
+- Added comprehensive unit test suite in `Lote1CoreTest.java` (12 tests, 100% pass rate).

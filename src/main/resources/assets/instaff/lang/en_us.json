@@ -1,3 +1,26 @@
-﻿{
-  "instaff.name": "In-Staff"
+{
+  "instaff.name": "In-Staff",
+  "instaff.prefix": "§8[§bIn-Staff§8] §r",
+  "instaff.common.enabled": "enabled",
+  "instaff.common.disabled": "disabled",
+  "instaff.common.permanent": "Permanent",
+  "instaff.common.never": "Never",
+  "instaff.common.unknown": "Unknown",
+  "instaff.common.none": "None",
+  "instaff.error.no_permission": "§cYou do not have permission to execute this command.",
+  "instaff.error.player_not_found": "§cPlayer '%s' could not be found.",
+  "instaff.error.invalid_duration": "§cInvalid duration format: '%s'. Valid examples: 30m, 2h, 1d12h, 7d.",
+  "instaff.error.config_not_loaded": "§cConfiguration is not loaded yet. Please try again later.",
+  "instaff.error.missing_key": "§c[Missing Translation]",
+  "instaff.error.generic": "§cAn unexpected error occurred. Please contact an administrator.",
+  "instaff.maintenance.kick_message": "§cThe server is currently under maintenance.\n§7Please check back later or contact staff.",
+  "instaff.maintenance.motd": "§cServer under Maintenance §8- §eStaff Only",
+  "instaff.integrity.kick_missing_mods": "§cDisconnected: Missing required mods for this server.",
+  "instaff.integrity.kick_blacklisted_mods": "§cDisconnected: Unauthorized mods detected (%s).",
+  "instaff.integrity.kick_timeout": "§cDisconnected: Client integrity verification timed out.",
+  "instaff.punishment.banned": "§cYou are banned from this server!\n§7Reason: §f%s\n§7Staff: §f%s\n§7Expires: §f%s",
+  "instaff.punishment.tempbanned": "§cYou are temporarily banned from this server!\n§7Reason: §f%s\n§7Staff: §f%s\n§7Expires in: §e%s",
+  "instaff.punishment.muted": "§cYou are muted! Remaining: §e%s§c. Reason: §f%s",
+  "instaff.punishment.frozen": "§cYou have been frozen by staff! Do not disconnect.",
+  "instaff.punishment.unfrozen": "§aYou have been unfrozen."
 }
