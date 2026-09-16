@@ -3,6 +3,7 @@ package com.tio.instaff.network;
 import com.tio.instaff.client.integrity.ClientHashScanner;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -66,6 +67,50 @@ class Lote5NetworkTest {
             assertEquals(token, decoded.clientToken());
             assertEquals(hashes, decoded.modHashes());
             assertEquals(modIds, decoded.loadedModIds());
+        }
+    }
+
+    @Nested
+    @DisplayName("Payload Hardening Tests")
+    class PayloadHardeningTests {
+
+        /**
+         * Regression guard: the element count came straight from an untrusted client and was
+         * used to pre-size the collection, so a few-byte packet could request a multi-gigabyte
+         * allocation and take the server down with an OutOfMemoryError.
+         */
+        @Test
+        @DisplayName("Absurd element count is rejected instead of pre-allocating")
+        void testHugeCountIsRejected() {
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
+            buf.writeUtf("some-token");
+            buf.writeVarInt(Integer.MAX_VALUE);
+
+            assertThrows(DecoderException.class, () -> IntegrityResponsePayload.STREAM_CODEC.decode(buf));
+        }
+
+        @Test
+        @DisplayName("Element count larger than the remaining bytes is rejected")
+        void testCountLargerThanBufferIsRejected() {
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
+            buf.writeUtf("some-token");
+            buf.writeVarInt(64);
+
+            assertThrows(DecoderException.class, () -> IntegrityResponsePayload.STREAM_CODEC.decode(buf));
+        }
+
+        @Test
+        @DisplayName("Legitimate payloads still round-trip after the bounds checks")
+        void testNormalPayloadStillDecodes() {
+            IntegrityResponsePayload original = new IntegrityResponsePayload(
+                    UUID.randomUUID().toString(),
+                    Map.of("modA.jar", "hashA"),
+                    List.of("instaff", "neoforge"));
+
+            RegistryFriendlyByteBuf buf = new RegistryFriendlyByteBuf(Unpooled.buffer(), null);
+            IntegrityResponsePayload.STREAM_CODEC.encode(buf, original);
+
+            assertEquals(original, IntegrityResponsePayload.STREAM_CODEC.decode(buf));
         }
     }
 

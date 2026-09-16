@@ -15,7 +15,10 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Inspection commands (/invsee and /endersee).
@@ -24,6 +27,13 @@ import java.util.UUID;
  * Requires OP permission level 2.
  */
 public final class InvseeCommand {
+
+    /**
+     * UUIDs currently being inspected through an offline (NBT snapshot) session.
+     * Two concurrent snapshots of the same player would silently discard one staff member's
+     * edits when the second menu closes, so only one offline session per player is allowed.
+     */
+    private static final Set<UUID> ACTIVE_OFFLINE_SESSIONS = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     private InvseeCommand() {
     }
@@ -74,15 +84,24 @@ public final class InvseeCommand {
         } else {
             // Offline player inspection
             UUID targetUUID = PlayerResolver.resolveUUID(server, targetName);
+
+            if (!ACTIVE_OFFLINE_SESSIONS.add(targetUUID)) {
+                source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.invsee.already_open", targetName));
+                return 0;
+            }
+
             OfflinePlayerDataHelper.OfflineInspectionResult result = OfflinePlayerDataHelper.loadOfflineInventory(server, targetUUID);
 
             if (result == null) {
+                ACTIVE_OFFLINE_SESSIONS.remove(targetUUID);
                 source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.invsee.not_found", targetName));
                 return 0;
             }
 
+            Runnable saveCallback = guardedOfflineSave(server, staffPlayer, targetUUID, targetName, result);
+
             staffPlayer.openMenu(new SimpleMenuProvider(
-                    (id, inv, p) -> new InvseeMenu(id, inv, result.getContainer(), targetName, targetUUID, true, result.getSaveCallback()),
+                    (id, inv, p) -> new InvseeMenu(id, inv, result.getContainer(), targetName, targetUUID, true, saveCallback),
                     Component.translatableWithFallback("instaff.screen.invsee.title", "Inventory: %s", targetName)
             ), buffer -> {
                 buffer.writeUtf(targetName);
@@ -132,15 +151,24 @@ public final class InvseeCommand {
         } else {
             // Offline player enderchest inspection
             UUID targetUUID = PlayerResolver.resolveUUID(server, targetName);
+
+            if (!ACTIVE_OFFLINE_SESSIONS.add(targetUUID)) {
+                source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.invsee.already_open", targetName));
+                return 0;
+            }
+
             OfflinePlayerDataHelper.OfflineInspectionResult result = OfflinePlayerDataHelper.loadOfflineEnderChest(server, targetUUID);
 
             if (result == null) {
+                ACTIVE_OFFLINE_SESSIONS.remove(targetUUID);
                 source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.invsee.not_found", targetName));
                 return 0;
             }
 
+            Runnable saveCallback = guardedOfflineSave(server, staffPlayer, targetUUID, targetName, result);
+
             staffPlayer.openMenu(new SimpleMenuProvider(
-                    (id, inv, p) -> new EnderseeMenu(id, inv, result.getContainer(), targetName, targetUUID, true, result.getSaveCallback()),
+                    (id, inv, p) -> new EnderseeMenu(id, inv, result.getContainer(), targetName, targetUUID, true, saveCallback),
                     Component.translatableWithFallback("instaff.screen.endersee.title", "Ender Chest: %s", targetName)
             ), buffer -> {
                 buffer.writeUtf(targetName);
@@ -152,5 +180,30 @@ public final class InvseeCommand {
                     targetName, LocalizationHelper.getRawTranslation("instaff.common.offline")), false);
             return 1;
         }
+    }
+
+    /**
+     * Wraps an offline save callback so it never writes a stale snapshot over live data.
+     * The snapshot is taken when the menu opens; if the target reconnects before the menu is
+     * closed, writing it back would overwrite the data the server now holds in memory (and would
+     * itself be overwritten on their next logout), so the write is skipped and staff are told.
+     */
+    private static Runnable guardedOfflineSave(MinecraftServer server,
+                                               ServerPlayer staffPlayer,
+                                               UUID targetUUID,
+                                               String targetName,
+                                               OfflinePlayerDataHelper.OfflineInspectionResult result) {
+        return () -> {
+            try {
+                if (server.getPlayerList().getPlayer(targetUUID) != null) {
+                    staffPlayer.sendSystemMessage(
+                            LocalizationHelper.getPrefixedMessage("instaff.command.invsee.save_aborted", targetName));
+                    return;
+                }
+                result.getSaveCallback().run();
+            } finally {
+                ACTIVE_OFFLINE_SESSIONS.remove(targetUUID);
+            }
+        };
     }
 }

@@ -1,6 +1,7 @@
 package com.tio.instaff.inspection;
 
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Container;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -102,7 +103,20 @@ public class InvseeMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(@NotNull Player player) {
-        return player.isAlive();
+        if (!player.isAlive()) {
+            return false;
+        }
+
+        // Offline inspection operates on a detached NBT snapshot, so it stays valid
+        // regardless of where the staff member is or who else is connected.
+        if (this.offline) {
+            return true;
+        }
+
+        // Live inspection must end as soon as the inspected player disconnects: their
+        // Inventory object is discarded on logout, so any further edit would be silently lost.
+        MinecraftServer server = player.getServer();
+        return server == null || server.getPlayerList().getPlayer(this.targetUUID) != null;
     }
 
     @Override

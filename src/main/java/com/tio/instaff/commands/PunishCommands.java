@@ -2,6 +2,7 @@ package com.tio.instaff.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.tio.instaff.InStaff;
 import com.tio.instaff.config.InStaffConfig;
 import com.tio.instaff.moderation.PunishmentManager;
 import com.tio.instaff.moderation.PunishmentRecord;
@@ -9,13 +10,15 @@ import com.tio.instaff.moderation.PunishmentType;
 import com.tio.instaff.util.DurationParser;
 import com.tio.instaff.util.LocalizationHelper;
 import com.tio.instaff.util.PlayerResolver;
+import com.tio.instaff.network.ServerIntegrityValidator;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.OptionalLong;
 import java.util.UUID;
@@ -64,12 +67,13 @@ public final class PunishCommands {
         ServerPlayer targetPlayer = server.getPlayerList().getPlayerByName(targetName);
 
         String ipAddress = (targetPlayer != null) ? targetPlayer.getIpAddress() : null;
+        String clientToken = resolveClientToken(targetUUID);
         UUID staffUUID = getStaffUUID(source);
         String staffName = getStaffName(source);
 
         PunishmentRecord record = new PunishmentRecord(
                 targetUUID, targetName, staffUUID, staffName,
-                PunishmentType.BAN, reason, -1L, ipAddress, null
+                PunishmentType.BAN, reason, -1L, ipAddress, clientToken
         );
         PunishmentManager.getInstance().addPunishment(record);
 
@@ -80,9 +84,7 @@ public final class PunishCommands {
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.ban.success", targetName, reason);
-        source.sendSuccess(() -> successMsg, true);
-
-        broadcastPunishment(server, successMsg);
+        announce(source, server, successMsg);
         return 1;
     }
 
@@ -109,17 +111,26 @@ public final class PunishCommands {
         }
         long durationMillis = durationOpt.getAsLong();
 
+        // Enforce the configured maximum temporary ban length.
+        long maxDurationMillis = InStaffConfig.getMaxTempBanDays() * 86_400_000L;
+        if (durationMillis > maxDurationMillis) {
+            source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.error.duration_too_long",
+                    DurationParser.formatDuration(maxDurationMillis)));
+            return 0;
+        }
+
         MinecraftServer server = source.getServer();
         UUID targetUUID = PlayerResolver.resolveUUID(server, targetName);
         ServerPlayer targetPlayer = server.getPlayerList().getPlayerByName(targetName);
 
         String ipAddress = (targetPlayer != null) ? targetPlayer.getIpAddress() : null;
+        String clientToken = resolveClientToken(targetUUID);
         UUID staffUUID = getStaffUUID(source);
         String staffName = getStaffName(source);
 
         PunishmentRecord record = new PunishmentRecord(
                 targetUUID, targetName, staffUUID, staffName,
-                PunishmentType.TEMP_BAN, reason, durationMillis, ipAddress, null
+                PunishmentType.TEMP_BAN, reason, durationMillis, ipAddress, clientToken
         );
         PunishmentManager.getInstance().addPunishment(record);
 
@@ -131,9 +142,7 @@ public final class PunishCommands {
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.tempban.success", targetName, formattedDuration, reason);
-        source.sendSuccess(() -> successMsg, true);
-
-        broadcastPunishment(server, successMsg);
+        announce(source, server, successMsg);
         return 1;
     }
 
@@ -194,9 +203,7 @@ public final class PunishCommands {
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.mute.success", targetName, reason);
-        source.sendSuccess(() -> successMsg, true);
-
-        broadcastPunishment(server, successMsg);
+        announce(source, server, successMsg);
         return 1;
     }
 
@@ -242,9 +249,7 @@ public final class PunishCommands {
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.tempmute.success", targetName, formattedDuration, reason);
-        source.sendSuccess(() -> successMsg, true);
-
-        broadcastPunishment(server, successMsg);
+        announce(source, server, successMsg);
         return 1;
     }
 
@@ -303,16 +308,14 @@ public final class PunishCommands {
 
         PunishmentRecord record = new PunishmentRecord(
                 targetPlayer.getUUID(), targetName, staffUUID, staffName,
-                PunishmentType.KICK, reason, 0L, targetPlayer.getIpAddress(), null
+                PunishmentType.KICK, reason, 0L, targetPlayer.getIpAddress(), resolveClientToken(targetPlayer.getUUID())
         );
         PunishmentManager.getInstance().addPunishment(record);
 
         targetPlayer.connection.disconnect(LocalizationHelper.getMessage("instaff.punishment.kicked", reason, staffName));
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.kick.success", targetName, reason);
-        source.sendSuccess(() -> successMsg, true);
-
-        broadcastPunishment(server, successMsg);
+        announce(source, server, successMsg);
         return 1;
     }
 
@@ -369,9 +372,39 @@ public final class PunishCommands {
         return "CONSOLE";
     }
 
-    private static void broadcastPunishment(MinecraftServer server, Component message) {
-        if (InStaffConfig.isBroadcastPunishments()) {
-            server.getPlayerList().broadcastSystemMessage(message, false);
+    /**
+     * Resolves the client installation token bound to a player, so that bans can be matched
+     * against it during the integrity handshake of a future connection (ban evasion deterrence).
+     * Falls back to the most recent token stored in the punishment history.
+     */
+    @Nullable
+    private static String resolveClientToken(UUID targetUUID) {
+        String token = ServerIntegrityValidator.getInstance().getKnownClientToken(targetUUID);
+        if (token != null && !token.isBlank()) {
+            return token;
         }
+        return PunishmentManager.getInstance().findLastKnownClientToken(targetUUID);
+    }
+
+    /**
+     * Announces a punishment exactly once per recipient.
+     * When broadcasting is enabled the message goes to every player (the issuer via command
+     * feedback, everyone else via a system message); operator command feedback is suppressed
+     * in that case so staff do not receive the same announcement twice.
+     */
+    private static void announce(CommandSourceStack source, MinecraftServer server, MutableComponent message) {
+        boolean broadcast = InStaffConfig.isBroadcastPunishments();
+        source.sendSuccess(() -> message, !broadcast);
+
+        if (broadcast) {
+            Entity issuer = source.getEntity();
+            for (ServerPlayer online : server.getPlayerList().getPlayers()) {
+                if (online != issuer) {
+                    online.sendSystemMessage(message);
+                }
+            }
+        }
+
+        InStaff.LOGGER.info("[Audit] {}", message.getString());
     }
 }

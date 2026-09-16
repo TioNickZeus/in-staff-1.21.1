@@ -11,6 +11,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,6 +24,13 @@ public final class ServerIntegrityValidator {
     private static final ServerIntegrityValidator INSTANCE = new ServerIntegrityValidator();
     private final Map<UUID, Long> pendingVerifications = new ConcurrentHashMap<>();
     private final Set<UUID> verifiedPlayers = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
+    /**
+     * Last known client installation token per player UUID.
+     * Deliberately retained after logout so that banning a player who just disconnected
+     * still binds the ban to their installation token.
+     */
+    private final Map<UUID, String> knownClientTokens = new ConcurrentHashMap<>();
 
     private ServerIntegrityValidator() {
     }
@@ -62,6 +70,9 @@ public final class ServerIntegrityValidator {
         pendingVerifications.remove(uuid);
 
         String token = response.clientToken();
+        if (token != null && !token.isBlank()) {
+            knownClientTokens.put(uuid, token);
+        }
         InStaff.LOGGER.info("Processing integrity response for player {} ({}) with installation token {}",
                 player.getGameProfile().getName(), uuid, token);
 
@@ -155,6 +166,21 @@ public final class ServerIntegrityValidator {
     public void onPlayerLeave(@NotNull UUID uuid) {
         pendingVerifications.remove(uuid);
         verifiedPlayers.remove(uuid);
+        // knownClientTokens is intentionally preserved so that /ban issued right after a
+        // disconnect can still bind the ban to the player's installation token.
+    }
+
+    /**
+     * Returns the last client installation token reported by this player during an integrity
+     * handshake, or {@code null} when the token is unknown (handshake disabled, never connected
+     * since the last server restart, or client did not report one).
+     */
+    @Nullable
+    public String getKnownClientToken(@Nullable UUID uuid) {
+        if (uuid == null) {
+            return null;
+        }
+        return knownClientTokens.get(uuid);
     }
 
     public boolean isVerified(@NotNull UUID uuid) {

@@ -247,6 +247,27 @@ public final class PunishmentManager {
     }
 
     /**
+     * Returns the most recent client installation token recorded for this player, if any.
+     * Used as a fallback when the player is not connected and the integrity validator
+     * holds no live token for them.
+     */
+    @Nullable
+    public String findLastKnownClientToken(@NotNull UUID targetUUID) {
+        synchronized (lock) {
+            for (int i = history.size() - 1; i >= 0; i--) {
+                PunishmentRecord r = history.get(i);
+                if (targetUUID.equals(r.getTargetUUID())) {
+                    String token = r.getClientToken();
+                    if (token != null && !token.isBlank()) {
+                        return token;
+                    }
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
      * Returns an unmodifiable copy of all historical punishment records.
      */
     @NotNull
