@@ -1,4 +1,4 @@
-﻿modLoader="javafml"
+modLoader="javafml"
 loaderVersion="${loader_version_range}"
 license="${mod_license}"
 
@@ -7,9 +7,13 @@ modId="${mod_id}"
 version="${mod_version}"
 displayName="${mod_name}"
 authors="${mod_authors}"
+displayURL="https://github.com/TioNickZeus/in-staff-1.21.1"
+issueTrackerURL="https://github.com/TioNickZeus/in-staff-1.21.1/issues"
 description='''
 Complete administration, moderation, and server security suite for Minecraft 1.21.1 (NeoForge).
-Features: Dynamic maintenance, moderation (ban, mute, timeout, freeze), player history, invsee, item protection, and chunk safe-unloading.
+Features: Client integrity verification, moderation (ban, mute, timeout, freeze), player history,
+invsee, item protection, chunk safe-unloading, and dynamic maintenance mode.
+Requires installation on both client and server.
 '''
 
 [[dependencies.${mod_id}]]

@@ -9,8 +9,9 @@ import net.neoforged.fml.config.ModConfig;
 import org.slf4j.Logger;
 
 /**
- * Main entrypoint for In-Staff.
+ * Common entrypoint for In-Staff.
  * Complete administration, moderation, and security suite for Minecraft 1.21.1 (NeoForge).
+ * Loaded on both client and server sides.
  */
 @Mod(InStaff.MODID)
 public final class InStaff {
@@ -21,6 +22,7 @@ public final class InStaff {
     public InStaff(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("In-Staff starting up (Minecraft 1.21.1 / NeoForge)");
 
-        modContainer.registerConfig(ModConfig.Type.COMMON, InStaffConfig.SPEC);
+        // SERVER config — only the server controls moderation rules
+        modContainer.registerConfig(ModConfig.Type.SERVER, InStaffConfig.SPEC);
     }
 }
