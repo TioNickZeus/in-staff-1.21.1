@@ -24,5 +24,8 @@ public final class InStaff {
 
         // SERVER config — only the server controls moderation rules
         modContainer.registerConfig(ModConfig.Type.SERVER, InStaffConfig.SPEC);
+
+        // Inspection menus
+        com.tio.instaff.inspection.ModMenus.register(modEventBus);
     }
 }

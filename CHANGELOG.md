@@ -32,3 +32,30 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Implemented `DurationParser.java` supporting monotonic time (`Util.getMillis()`), permanent durations, units (`s`, `m`, `h`, `d`, `w`, `mo`, `y`), composite strings, and duration formatting.
 - Implemented `TextUtil.java` with color code translation (`&` to `§`), formatting stripping, epoch formatting, and safe identity formatting.
 - Added comprehensive unit test suite in `Lote1CoreTest.java` (12 tests, 100% pass rate).
+
+### Added (Batch 2: Data Persistence & State Managers)
+- Implemented `FileStorageUtil.java` providing atomic `.tmp` file swaps (`Files.move(REPLACE_EXISTING)`), thread-safe JSON serialization, corrupt file backup, and zero server crash policy.
+- Created `PlayerResolver.java` enforcing local deterministic UUID lookups (`UUIDUtil.createOfflinePlayerUUID`) and local `GameProfileCache` queries with zero external Mojang HTTP calls.
+- Implemented `PunishmentRecord.java` POJO tracking audit metadata, expirations, and offline evasion detection fields (IP + client installation tokens).
+- Built `PunishmentManager.java` thread-safe moderation engine indexing active bans, mutes, freezes, and IP/token lookups with atomic persistence to `instaff/punishments_history.json`.
+- Built `MaintenanceManager.java` dynamic maintenance access controller supporting staff bypass and atomic persistence to `instaff/maintenance.json`.
+- Built `WhitelistManager.java` smart whitelist manager supporting dynamic reloads and atomic persistence to `instaff/whitelist.json`.
+- Built `PlaytimeTracker.java` tracking monotonic session durations (`Util.getMillis()`), historical totals, and last-seen telemetry in `instaff/playtime.json`.
+- Added comprehensive unit test suite in `Lote2PersistenceTest.java` (22 total tests across Lote 1 and 2, 100% pass rate).
+
+### Added (Batch 3: Event Handlers, Freeze & Item Protections)
+- Implemented `ModerationEventHandler.java` enforcing login checks (maintenance mode, dynamic whitelist, UUID & IP ban evasion detection), chat mute interception, and player freeze mechanics (position clamping, interaction denials, periodic notification).
+- Implemented `BanItemMode.java` enum defining `TOTAL`, `NO_USE`, and `NO_PLACE` restriction levels.
+- Built `BanItemManager.java` with thread-safe in-memory index and atomic persistence to `instaff/banned_items.json`.
+- Implemented `ProtectionEventHandler.java` intercepting `RightClickItem`, `RightClickBlock`, `EntityPlaceEvent`, `ItemEntityPickupEvent.Pre` with `TriState.FALSE`, and periodic inventory scans for total confiscation.
+- Built `ChunkQuarantineHandler.java` providing zero-crash defensive shields for corrupted entities and block entities with persistent logging in `instaff/quarantine.log`.
+- Added localized messages for whitelist kicks and ban-item denials in `en_us.json` and `pt_br.json`.
+- Added comprehensive unit test suite in `Lote3ProtectionTest.java` (26 total tests across Lotes 1, 2, and 3, 100% pass rate).
+
+### Added (Batch 4: Inspection Engine & Offline NBT)
+- Implemented `ModMenus.java` registering `invsee` and `endersee` menu types using `IMenuTypeExtension`.
+- Implemented `InvseeMenu.java` providing full 41-slot container inspection (armor, offhand, main, and hotbar) with bidirectional shift-click transfer.
+- Implemented `EnderseeMenu.java` providing 27-slot Ender Chest inspection with bidirectional shift-click transfer.
+- Implemented `OfflinePlayerDataHelper.java` reading and writing `world/playerdata/<UUID>.dat` NBT directly with atomic `.tmp` swaps upon menu closure.
+- Implemented client screens `InvseeScreen.java` and `EnderseeScreen.java` under `com.tio.instaff.client.screen`, registered via `RegisterMenuScreensEvent` in `InStaffClient.java` with strict side separation.
+- Added comprehensive unit test suite in `Lote4InspectionTest.java` (29 total tests across Lotes 1-4, 100% pass rate).

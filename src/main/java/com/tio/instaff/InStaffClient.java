@@ -1,10 +1,14 @@
 package com.tio.instaff;
 
 import com.mojang.logging.LogUtils;
+import com.tio.instaff.client.screen.EnderseeScreen;
+import com.tio.instaff.client.screen.InvseeScreen;
+import com.tio.instaff.inspection.ModMenus;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import org.slf4j.Logger;
 
 /**
@@ -23,7 +27,15 @@ public final class InStaffClient {
     public InStaffClient(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("In-Staff client module initializing");
 
-        // TODO: Register client screens (InvseeScreen, EnderseeScreen)
-        // TODO: Register client integrity scanner handler
+        // Register client screens
+        modEventBus.addListener(RegisterMenuScreensEvent.class, this::registerScreens);
+
+        // TODO: Register client integrity scanner handler (Lote 5)
+    }
+
+    private void registerScreens(RegisterMenuScreensEvent event) {
+        event.register(ModMenus.INVSEE.get(), InvseeScreen::new);
+        event.register(ModMenus.ENDERSEE.get(), EnderseeScreen::new);
+        LOGGER.info("In-Staff inspection screens registered (InvseeScreen, EnderseeScreen)");
     }
 }

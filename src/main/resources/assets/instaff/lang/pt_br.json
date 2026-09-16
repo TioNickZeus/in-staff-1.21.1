@@ -15,6 +15,7 @@
   "instaff.error.generic": "§cOcorreu um erro inesperado. Entre em contato com a administração.",
   "instaff.maintenance.kick_message": "§cO servidor está atualmente em manutenção.\n§7Por favor, volte mais tarde ou contate a equipe.",
   "instaff.maintenance.motd": "§cServidor em Manutenção §8- §eApenas Staff",
+  "instaff.whitelist.kick_message": "§cVocê não está na whitelist deste servidor.",
   "instaff.integrity.kick_missing_mods": "§cDesconectado: Mods obrigatórios ausentes neste servidor.",
   "instaff.integrity.kick_blacklisted_mods": "§cDesconectado: Mods não autorizados detectados (%s).",
   "instaff.integrity.kick_timeout": "§cDesconectado: O tempo limite de verificação de integridade expirou.",
@@ -22,5 +23,8 @@
   "instaff.punishment.tempbanned": "§cVocê foi temporariamente banido deste servidor!\n§7Motivo: §f%s\n§7Staff: §f%s\n§7Expira em: §e%s",
   "instaff.punishment.muted": "§cVocê está mutado! Tempo restante: §e%s§c. Motivo: §f%s",
   "instaff.punishment.frozen": "§cVocê foi congelado por um membro da staff! Não desconecte.",
-  "instaff.punishment.unfrozen": "§aVocê foi descongelado."
+  "instaff.punishment.unfrozen": "§aVocê foi descongelado.",
+  "instaff.banitem.denied_use": "§cVocê não pode usar este item restrito!",
+  "instaff.banitem.denied_place": "§cVocê não pode posicionar este bloco restrito!",
+  "instaff.banitem.confiscated": "§cItem restrito confiscado do seu inventário!"
 }
