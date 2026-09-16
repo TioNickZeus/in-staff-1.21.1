@@ -30,4 +30,16 @@ public enum BanItemMode {
     public boolean blocksPossession() {
         return this == TOTAL;
     }
+
+    public static BanItemMode fromString(String str) {
+        if (str == null || str.isBlank()) {
+            return TOTAL;
+        }
+        String upper = str.trim().toUpperCase();
+        return switch (upper) {
+            case "NO_USE", "USE", "INTERACT" -> NO_USE;
+            case "NO_PLACE", "PLACE" -> NO_PLACE;
+            default -> TOTAL;
+        };
+    }
 }

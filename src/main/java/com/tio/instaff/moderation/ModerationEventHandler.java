@@ -85,6 +85,9 @@ public final class ModerationEventHandler {
 
         // 4. Start Playtime Tracking
         PlaytimeTracker.getInstance().onPlayerJoin(uuid, player.getGameProfile().getName());
+
+        // 5. Initiate Client Integrity Handshake
+        com.tio.instaff.network.ServerIntegrityValidator.getInstance().initiateHandshake(player);
     }
 
     @SubscribeEvent
@@ -96,6 +99,7 @@ public final class ModerationEventHandler {
         UUID uuid = player.getUUID();
         PlaytimeTracker.getInstance().onPlayerLeave(uuid);
         FREEZE_POSITIONS.remove(uuid);
+        com.tio.instaff.network.ServerIntegrityValidator.getInstance().onPlayerLeave(uuid);
     }
 
     @SubscribeEvent
@@ -120,6 +124,9 @@ public final class ModerationEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
+
+        // Integrity handshake timeout watchdog
+        com.tio.instaff.network.ServerIntegrityValidator.getInstance().tickWatchdog(player);
 
         UUID uuid = player.getUUID();
         if (PunishmentManager.getInstance().isFrozen(uuid)) {

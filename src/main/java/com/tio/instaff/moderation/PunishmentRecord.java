@@ -75,6 +75,10 @@ public class PunishmentRecord {
         return active && !isExpired();
     }
 
+    public boolean isRevoked() {
+        return revokedAtEpoch > 0;
+    }
+
     public void revoke(@Nullable UUID staffUUID, @Nullable String staffName, @Nullable String reason) {
         this.active = false;
         this.revokedAtEpoch = System.currentTimeMillis();
