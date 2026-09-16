@@ -42,3 +42,12 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Built `WhitelistManager.java` smart whitelist manager supporting dynamic reloads and atomic persistence to `instaff/whitelist.json`.
 - Built `PlaytimeTracker.java` tracking monotonic session durations (`Util.getMillis()`), historical totals, and last-seen telemetry in `instaff/playtime.json`.
 - Added comprehensive unit test suite in `Lote2PersistenceTest.java` (22 total tests across Lote 1 and 2, 100% pass rate).
+
+### Added (Batch 3: Event Handlers, Freeze & Item Protections)
+- Implemented `ModerationEventHandler.java` enforcing login checks (maintenance mode, dynamic whitelist, UUID & IP ban evasion detection), chat mute interception, and player freeze mechanics (position clamping, interaction denials, periodic notification).
+- Implemented `BanItemMode.java` enum defining `TOTAL`, `NO_USE`, and `NO_PLACE` restriction levels.
+- Built `BanItemManager.java` with thread-safe in-memory index and atomic persistence to `instaff/banned_items.json`.
+- Implemented `ProtectionEventHandler.java` intercepting `RightClickItem`, `RightClickBlock`, `EntityPlaceEvent`, `ItemEntityPickupEvent.Pre` with `TriState.FALSE`, and periodic inventory scans for total confiscation.
+- Built `ChunkQuarantineHandler.java` providing zero-crash defensive shields for corrupted entities and block entities with persistent logging in `instaff/quarantine.log`.
+- Added localized messages for whitelist kicks and ban-item denials in `en_us.json` and `pt_br.json`.
+- Added comprehensive unit test suite in `Lote3ProtectionTest.java` (26 total tests across Lotes 1, 2, and 3, 100% pass rate).
