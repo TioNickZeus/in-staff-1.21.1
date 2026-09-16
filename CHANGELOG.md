@@ -67,3 +67,24 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Built `ServerIntegrityValidator.java` enforcing required mods, blacklisted mod IDs (`xray`, `baritone`, `freecam`), blacklisted SHA-256 hashes, offline ban evasion detection via client token matching, and handshake timeout watchdogs.
 - Connected integrity handshake initiation and watchdog tick into `ModerationEventHandler.java`.
 - Added comprehensive unit test suite in `Lote5NetworkTest.java` (34 total tests across Lotes 1-5, 100% pass rate).
+
+### Added (Batch 6: Commands & Final Exposure)
+- Implemented `StaffCommand.java` providing `/staff` and `/instaff` administrative hubs with permission checks and help overviews.
+- Implemented `PunishCommands.java` implementing all core moderation commands with full offline player support and tab-completion:
+  - `/ban <player> [reason]` (permanent ban, kicks player, broadcasts punishment).
+  - `/tempban <player> <duration> [reason]` (duration parsing, kicks player, broadcasts punishment).
+  - `/unban <player>` (removes active ban in `PunishmentManager`).
+  - `/mute <player> [reason]` (permanent chat mute, target notification).
+  - `/tempmute <player> <duration> [reason]` (temporary mute with duration parsing, target notification).
+  - `/unmute <player>` (removes active mute in `PunishmentManager`).
+  - `/kick <player> [reason]` (online check, disconnects player, audits to history).
+  - `/freeze <player>` (toggles freeze state, notifies target and staff).
+- Implemented `MaintenanceCommand.java` with subcommands `on`, `off`, `status`, and `bypass add|remove <player>`.
+- Implemented `WhitelistCommand.java` with subcommands `on`, `off`, `add <player>`, `remove <player>`, `list`, and `reload`.
+- Implemented `InvseeCommand.java` registering `/invsee <player>` and `/endersee <player>` with live synchronization for online players and atomic `.tmp` offline playerdata NBT manipulation.
+- Implemented `BanItemCommand.java` with subcommands `add <itemId> [mode]`, `remove <itemId>`, `list`, and `check [itemId]`. Added `fromString` parser to `BanItemMode.java`.
+- Implemented `HistoryCommand.java` providing `/history <player>` and `/checkpunish <player>` with full audit trail formatting (date, staff, reason, active/expired/revoked state).
+- Implemented `PlaytimeCommand.java` providing `/playtime` (self and player lookups) and `/seen <player>` (activity telemetry, last seen, first joined).
+- Implemented `ModCommands.java` subscribing to `RegisterCommandsEvent` on `NeoForge.EVENT_BUS` to register all commands cleanly.
+- Updated language dictionaries in `en_us.json` and `pt_br.json` with complete localization for all commands and status tokens.
+- Added comprehensive unit test suite in `Lote6CommandsTest.java` (47 total tests across all batches, 100% pass rate).

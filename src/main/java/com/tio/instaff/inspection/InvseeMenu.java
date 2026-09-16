@@ -102,7 +102,7 @@ public class InvseeMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(@NotNull Player player) {
-        return this.targetContainer.stillValid(player);
+        return player.isAlive();
     }
 
     @Override
