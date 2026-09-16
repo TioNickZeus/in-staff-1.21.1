@@ -15,7 +15,19 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ## 🛡️ Triage Ledger
 
-*(No open issues currently reported. Register new findings below during testing sessions).*
+### 1. Anti-Cheat & Client Integrity Bypasses
+* `[Pending Testing]` — **Mod Spoofing:** A sophisticated user could compile a cheat client into a custom `.jar` and change the internal mod ID to match something benign (e.g., `jei`) to bypass both the blacklist and the hash check.
+* `[Pending Testing]` — **Token Scrubbing:** If a banned player uses a VPN (to change their IP) and manually deletes the `.instaff_token` file, they might bypass the offline evasion check.
+
+### 2. Inventory Inspection (`/invsee`) Concurrency
+* `[Pending Testing]` — **Simultaneous Interaction Desync:** If an admin is manipulating a live player's inventory via `/invsee` at the exact same millisecond the player drops the item (pressing `Q`) or opens a chest, there could be a visual state desync.
+* `[Pending Testing]` — **Offline Save Race Condition:** If an admin is editing an offline player's inventory and that player connects exactly before the admin closes the menu, we must ensure the live data isn't overwritten or briefly corrupted.
+
+### 3. Playtime & I/O Async Edge Cases
+* `[Pending Testing]` — **Abrupt Shutdown Data Loss:** If the server process is forcefully killed (e.g., power outage) exactly between the data snapshot and the async thread writing to `.tmp`, a few seconds of data might be lost. Ensure the rollback mechanism is atomic and works.
+
+### 4. Offline-Mode Identity Collisions
+* `[Pending Testing]` — **Same-Name Conflict:** If a premium player named "Notch" and a cracked player named "Notch" join at different times, they share the same UUID, inventory, and permissions. Check if they inherit the same punishment records (expected behavior, but needs testing).
 
 ---
 
