@@ -29,6 +29,9 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 ### 4. Offline-Mode Identity Collisions
 * `[Pending Testing]` — **Same-Name Conflict:** If a premium player named "Notch" and a cracked player named "Notch" join at different times, they share the same UUID, inventory, and permissions. Check if they inherit the same punishment records (expected behavior, but needs testing).
 
+### 5. Chat & Mute Bypasses
+* `[Confirmed]` — **Command Chat Bypass:** The `/mute` system currently only intercepts `ServerChatEvent`. Players can bypass mutes by using chat-related commands such as `/msg`, `/me`, or third-party chat mod commands like `/g`, `/global`, because these fire as `CommandEvent` instead.
+
 ---
 
 ## 📜 Session Test Logs Template

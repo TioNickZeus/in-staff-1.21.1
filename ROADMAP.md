@@ -42,3 +42,4 @@ This document tracks planned features, current sprint goals, and technical miles
 - [ ] **Logging Standardization**: Replace generic `System.err.println` and `printStackTrace()` in defensive tick-loop try/catch blocks (`ProtectionEventHandler`, `ModerationEventHandler`, `IntegrityEventHandler`) with the centralized `InStaff.LOGGER.error`.
 - [ ] **Command Delegation Strictness**: Refactor punishment commands (e.g., `/kick`, `/ban`) to fully delegate player disconnection logic to `PunishmentManager` instead of issuing the `connection.disconnect()` call directly from the command execution layer.
 - [ ] **Curios Accessory Integration**: Implement soft-dependency support for inspecting and modifying Curios slots via `/invsee`.
+- [ ] **Mute Command Bypass**: Intercept `CommandEvent` in `ModerationEventHandler` to prevent muted players from using chat-related commands (`/msg`, `/tell`, `/g`, `/global`, etc.) that bypass `ServerChatEvent`.
