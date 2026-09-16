@@ -26,6 +26,7 @@ public final class BanItemManager {
     private static final String FILE_NAME = "banned_items.json";
 
     private final Object lock = new Object();
+    private final Object ioLock = new Object();
     private final Map<String, BanItemMode> bannedItems = new HashMap<>();
 
     private BanItemManager() {
@@ -54,9 +55,15 @@ public final class BanItemManager {
     }
 
     public void save() {
+        Map<String, BanItemMode> snapshot;
         synchronized (lock) {
-            FileStorageUtil.saveAtomicJson(getStoragePath(), bannedItems);
+            snapshot = new HashMap<>(bannedItems);
         }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            synchronized (ioLock) {
+                FileStorageUtil.saveAtomicJson(getStoragePath(), snapshot);
+            }
+        });
     }
 
     public void banItem(@NotNull String itemId, @NotNull BanItemMode mode) {

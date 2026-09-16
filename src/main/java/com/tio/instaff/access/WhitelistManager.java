@@ -24,6 +24,7 @@ public final class WhitelistManager {
     private static final String FILE_NAME = "whitelist.json";
 
     private final Object lock = new Object();
+    private final Object ioLock = new Object();
     private boolean enabled;
     private final Map<UUID, String> allowedPlayers = new HashMap<>();
 
@@ -63,12 +64,16 @@ public final class WhitelistManager {
     }
 
     public void save() {
+        WhitelistSaveData data = new WhitelistSaveData();
         synchronized (lock) {
-            WhitelistSaveData data = new WhitelistSaveData();
             data.enabled = this.enabled;
             data.allowedPlayers = new HashMap<>(this.allowedPlayers);
-            FileStorageUtil.saveAtomicJson(getStoragePath(), data);
         }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            synchronized (ioLock) {
+                FileStorageUtil.saveAtomicJson(getStoragePath(), data);
+            }
+        });
     }
 
     public boolean isEnabled() {
