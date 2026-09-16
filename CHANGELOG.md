@@ -17,3 +17,10 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Updated `ARCHITECTURE.md` with full client+server package map, side distribution table, and network handshake lifecycle (§3.5).
 - Updated `AGENT.md` with client+server invariants and side separation rules.
 - Added `displayURL` and `issueTrackerURL` to `neoforge.mods.toml`.
+
+### Offline Server (`online-mode=false`) Architectural Invariants
+- Formalized offline mode compatibility in `AGENT.md` and `ARCHITECTURE.md`.
+- Prohibited external Mojang HTTP API calls (`api.mojang.com`) for UUID resolution to prevent identity conflicts.
+- Standardized offline player lookups via `server.getProfileCache()` and `UUIDUtil.createOfflinePlayerUUID(name)`.
+- Specified offline ban evasion mitigations combining IP tracking and client-side installation token binding.
+- Updated `ROADMAP.md` with offline mode milestone deliverables.

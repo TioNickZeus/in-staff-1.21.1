@@ -14,6 +14,8 @@ This document tracks planned features, current sprint goals, and technical miles
   - [ ] Player freeze mechanic restricting movement, interactions, and rotation (server + client enforcement).
   - [ ] Punishment audit history ledger (`/history <player>`).
   - [ ] Human duration parser (`1d`, `12h`, `30m`).
+  - [ ] Offline server (`online-mode=false`) compatibility (local `UUIDUtil.createOfflinePlayerUUID` and `GameProfileCache` resolution, zero Mojang HTTP queries).
+  - [ ] Offline ban evasion mitigation (dual IP + client installation token binding).
 - [ ] **Access & Maintenance**:
   - [ ] Dynamic maintenance mode with custom MOTD and staff whitelist bypass.
   - [ ] In-game dynamic whitelist with live reload and custom kick messages.

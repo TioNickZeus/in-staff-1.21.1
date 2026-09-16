@@ -26,9 +26,12 @@ Every AI agent operating in this repository **must strictly preserve** these cor
 4. **Server-Authoritative Configuration**:
    - All moderation configuration uses `ModConfig.Type.SERVER`. The client cannot override or weaken server rules.
    - Client-specific preferences (e.g., UI settings) use a separate `ModConfig.Type.CLIENT` if needed.
-5. **UUID-First Identification**:
+5. **UUID-First Identification & Offline Mode Support**:
    - Player identity must **always** be resolved and persisted by `UUID`, never solely by player name.
-   - Offline lookups must support both online players (`ServerPlayer`) and offline disk data (`GameProfile` / `playerdata/<UUID>.dat`).
+   - Must cleanly support both Online (`online-mode=true`) and Offline (`online-mode=false`) servers.
+   - **Zero External Mojang HTTP Requests**: Never query external Mojang APIs (e.g. `api.mojang.com`) to resolve player UUIDs. In offline servers, Mojang returns online UUIDs that conflict with the server's deterministic offline UUIDs, corrupting punishments and data.
+   - Offline lookups must resolve through `ServerPlayer.getUUID()`, the server's local `GameProfileCache` (`server.getProfileCache().get(name)`), or native deterministic offline generation (`UUIDUtil.createOfflinePlayerUUID(name)`).
+   - **Offline Ban Evasion Mitigation**: In offline servers, players can easily change nicks to get new UUIDs. The moderation engine must support IP tracking and leverage the client-side mod installation token/handshake to deter evasion.
 6. **Monotonic Timing (`Util.getMillis()`)**:
    - All durations and elapsed-time comparisons (temp-bans, temp-mutes, timeouts, playtime accumulation) must use `net.minecraft.Util.getMillis()`, never wall-clock `System.currentTimeMillis()`.
 7. **Data Integrity & Atomic Persistence**:

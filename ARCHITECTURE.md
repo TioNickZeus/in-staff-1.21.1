@@ -17,6 +17,7 @@
 | **Config Type** | `SERVER` (TOML, authoritative — only the server controls moderation rules) |
 | **License** | CC-BY-NC-4.0 |
 | **Execution** | **Client + Server** — mod must be installed on both sides |
+| **Authentication** | Supports both **Online** (`online-mode=true`) and **Offline** (`online-mode=false`) servers |
 
 ### Purpose
 
@@ -117,7 +118,11 @@ src/main/resources/assets/instaff/lang/
 
 ### 3.1 Moderation Engine (`moderation/`)
 
-- **Identifier**: Always UUID-based. Lookups from names are resolved via `ServerPlayer` or the server's `GameProfileCache`.
+- **Identifier & Resolution**: Always UUID-based. Lookups from names are resolved via `ServerPlayer` or the server's `GameProfileCache`.
+  - **Online Servers (`online-mode=true`)**: Standard Mojang v4 UUIDs.
+  - **Offline Servers (`online-mode=false`)**: Deterministic v3 UUIDs generated via `UUIDUtil.createOfflinePlayerUUID(playerName)` (`nameUUIDFromBytes("OfflinePlayer:" + name)`).
+  - **Strict Invariant — Zero External Mojang HTTP Requests**: Never query `api.mojang.com` or external web APIs. On offline servers, external APIs return Mojang account UUIDs that do NOT match the server's local deterministic UUIDs, causing bans and data to target the wrong identity.
+  - **Offline Ban Evasion Mitigation**: Because offline mode players can alter their launcher nickname to spawn with a fresh UUID, the moderation engine supports combining UUID bans with IP bans and client-side installation tokens exchanged during the `IntegrityResponsePayload` handshake.
 - **Punishment Lifecycle**:
   - **Bans**: Intercepted in `PlayerEvent.PlayerLoggedInEvent`. If an active ban exists, the player is immediately disconnected (`player.connection.disconnect(...)`) with a styled Component showing the ban reason, issuer name, and expiry timestamp.
   - **Mutes**: Intercepted in `ServerChatEvent` and private message commands (`/tell`, `/msg`, `/w`). Blocked messages notify the muted player with remaining time.
@@ -220,3 +225,4 @@ The client integrity system verifies that connecting clients are running an appr
 5. **Atomic File Writes**: Any disk write must use a `.tmp` file swap via `Files.move(..., StandardCopyOption.REPLACE_EXISTING)`.
 6. **Complete Internationalization**: Every player-facing message must use `LocalizationHelper` and be defined in both `en_us.json` and `pt_br.json`.
 7. **Side Separation**: Server code must never import from `com.tio.instaff.client.*`. Client code accesses shared types from `network/`, `inspection/`, and `util/` only.
+8. **Offline-Mode (`online-mode=false`) Integrity**: All UUID resolution must remain strictly local and deterministic (`server.getProfileCache()` or `UUIDUtil.createOfflinePlayerUUID`). External HTTP requests to Mojang APIs are strictly forbidden. Moderation and access systems must implement IP and client-token associations to mitigate offline ban evasion.
