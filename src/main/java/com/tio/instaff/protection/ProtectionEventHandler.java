@@ -110,35 +110,40 @@ public final class ProtectionEventHandler {
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        if (player.hasPermissions(2)) {
-            return; // Staff bypass
-        }
-
-        // Inventory confiscation check every 20 ticks (1 second)
-        if (player.tickCount % 20 != 0) {
-            return;
-        }
-
-        boolean confiscated = false;
-        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-            ItemStack stack = player.getInventory().getItem(i);
-            if (stack.isEmpty()) {
-                continue;
+        try {
+            if (!(event.getEntity() instanceof ServerPlayer player)) {
+                return;
             }
 
-            BanItemMode mode = BanItemManager.getInstance().getMode(stack);
-            if (mode != null && mode.blocksPossession()) {
-                player.getInventory().setItem(i, ItemStack.EMPTY);
-                confiscated = true;
+            if (player.hasPermissions(2)) {
+                return; // Staff bypass
             }
-        }
 
-        if (confiscated) {
-            player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.banitem.confiscated"));
+            // Inventory confiscation check every 20 ticks (1 second)
+            if (player.tickCount % 20 != 0) {
+                return;
+            }
+
+            boolean confiscated = false;
+            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                ItemStack stack = player.getInventory().getItem(i);
+                if (stack.isEmpty()) {
+                    continue;
+                }
+
+                BanItemMode mode = BanItemManager.getInstance().getMode(stack);
+                if (mode != null && mode.blocksPossession()) {
+                    player.getInventory().setItem(i, ItemStack.EMPTY);
+                    confiscated = true;
+                }
+            }
+
+            if (confiscated) {
+                player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.banitem.confiscated"));
+            }
+        } catch (Throwable t) {
+            System.err.println("[In-Staff] Error in ProtectionEventHandler.onPlayerTick: " + t.getMessage());
+            t.printStackTrace();
         }
     }
 }

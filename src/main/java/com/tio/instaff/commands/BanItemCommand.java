@@ -74,13 +74,13 @@ public final class BanItemCommand {
                             if (source.getEntity() instanceof ServerPlayer player) {
                                 ItemStack stack = player.getMainHandItem();
                                 if (stack.isEmpty()) {
-                                    source.sendFailure(Component.literal("§cHold an item in your main hand or specify an item ID: /banitem check <item>"));
+                                    source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.banitem.hold_item"));
                                     return 0;
                                 }
                                 ResourceLocation key = BuiltInRegistries.ITEM.getKey(stack.getItem());
                                 return executeCheck(source, key.toString());
                             } else {
-                                source.sendFailure(Component.literal("§cConsole must specify an item ID: /banitem check <item>"));
+                                source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.banitem.console_specify"));
                                 return 0;
                             }
                         })

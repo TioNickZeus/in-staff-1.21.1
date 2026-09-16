@@ -53,7 +53,7 @@ public final class InvseeCommand {
 
     private static int executeInvsee(CommandSourceStack source, String targetName) {
         if (!(source.getEntity() instanceof ServerPlayer staffPlayer)) {
-            source.sendFailure(Component.literal("§cThis command can only be executed by a player in-game."));
+            source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.error.player_only"));
             return 0;
         }
 
@@ -125,7 +125,7 @@ public final class InvseeCommand {
 
     private static int executeEndersee(CommandSourceStack source, String targetName) {
         if (!(source.getEntity() instanceof ServerPlayer staffPlayer)) {
-            source.sendFailure(Component.literal("§cThis command can only be executed by a player in-game."));
+            source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.error.player_only"));
             return 0;
         }
 

@@ -81,7 +81,7 @@ com.tio.instaff/
 │   ├── InvseeMenu.java              ← Custom AbstractContainerMenu synced with target player
 │   ├── EnderseeMenu.java            ← Custom menu synced with target EnderChest
 │   ├── OfflinePlayerDataHelper.java ← Safe NBT loading/writing for offline playerdata/*.dat
-│   └── CuriosIntegration.java       ← Optional soft-dependency for Curios accessories
+│   └── CuriosIntegration.java       ← [Planned] Optional soft-dependency for Curios accessories
 ├── protection/                      ← Item restrictions and world health (server-side)
 │   ├── BanItemManager.java          ← Restricted item store and action validator
 │   ├── BanItemMode.java             ← Enum: TOTAL, NO_USE, NO_PLACE
@@ -152,8 +152,8 @@ src/main/resources/assets/instaff/lang/
   - Reads `world/playerdata/<UUID>.dat` via `NbtIo.readCompressed`.
   - Loads inventory tags into a virtual container.
   - Upon menu closure, modifications are written back to the `.dat` file atomically (`.tmp` swap).
-- **Curios Compatibility**:
-  - Checked via `ModList.get().isLoaded("curios")`. If present, accessory slots are appended to the inspection view.
+- **Curios Compatibility [Planned]**:
+  - Will be checked via `ModList.get().isLoaded("curios")`. If present, accessory slots are appended to the inspection view.
 
 ### 3.4 Protection & Chunk Quarantine (`protection/`)
 

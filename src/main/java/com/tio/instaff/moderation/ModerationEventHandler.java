@@ -121,29 +121,34 @@ public final class ModerationEventHandler {
 
     @SubscribeEvent
     public static void onPlayerTick(PlayerTickEvent.Post event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        // Integrity handshake timeout watchdog
-        com.tio.instaff.network.ServerIntegrityValidator.getInstance().tickWatchdog(player);
-
-        UUID uuid = player.getUUID();
-        if (PunishmentManager.getInstance().isFrozen(uuid)) {
-            Vec3 frozenPos = FREEZE_POSITIONS.computeIfAbsent(uuid, k -> player.position());
-
-            // Clamp position if moved away
-            if (player.distanceToSqr(frozenPos) > 0.04) {
-                player.teleportTo(player.serverLevel(), frozenPos.x, frozenPos.y, frozenPos.z, player.getYRot(), player.getXRot());
+        try {
+            if (!(event.getEntity() instanceof ServerPlayer player)) {
+                return;
             }
-            player.setDeltaMovement(0, 0, 0);
 
-            // Periodic warning every 100 ticks (5 seconds)
-            if (player.tickCount % 100 == 0) {
-                player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.punishment.frozen"));
+            // Integrity handshake timeout watchdog
+            com.tio.instaff.network.ServerIntegrityValidator.getInstance().tickWatchdog(player);
+
+            UUID uuid = player.getUUID();
+            if (PunishmentManager.getInstance().isFrozen(uuid)) {
+                Vec3 frozenPos = FREEZE_POSITIONS.computeIfAbsent(uuid, k -> player.position());
+
+                // Clamp position if moved away
+                if (player.distanceToSqr(frozenPos) > 0.04) {
+                    player.teleportTo(player.serverLevel(), frozenPos.x, frozenPos.y, frozenPos.z, player.getYRot(), player.getXRot());
+                }
+                player.setDeltaMovement(0, 0, 0);
+
+                // Periodic warning every 100 ticks (5 seconds)
+                if (player.tickCount % 100 == 0) {
+                    player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.punishment.frozen"));
+                }
+            } else {
+                FREEZE_POSITIONS.remove(uuid);
             }
-        } else {
-            FREEZE_POSITIONS.remove(uuid);
+        } catch (Throwable t) {
+            System.err.println("[In-Staff] Error in ModerationEventHandler.onPlayerTick: " + t.getMessage());
+            t.printStackTrace();
         }
     }
 
