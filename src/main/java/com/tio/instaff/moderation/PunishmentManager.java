@@ -21,6 +21,7 @@ public final class PunishmentManager {
     private static final String FILE_NAME = "punishments_history.json";
 
     private final Object lock = new Object();
+    private final Object ioLock = new Object();
     private final List<PunishmentRecord> history = new java.util.concurrent.CopyOnWriteArrayList<>();
     private final Map<UUID, PunishmentRecord> activeBans = new java.util.concurrent.ConcurrentHashMap<>();
     private final Map<UUID, PunishmentRecord> activeMutes = new java.util.concurrent.ConcurrentHashMap<>();
@@ -69,9 +70,15 @@ public final class PunishmentManager {
      * Atomically saves all punishment history to disk.
      */
     public void save() {
+        List<PunishmentRecord> snapshot;
         synchronized (lock) {
-            FileStorageUtil.saveAtomicJson(getStoragePath(), history);
+            snapshot = new ArrayList<>(history);
         }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            synchronized (ioLock) {
+                FileStorageUtil.saveAtomicJson(getStoragePath(), snapshot);
+            }
+        });
     }
 
     private void indexActive(PunishmentRecord record) {

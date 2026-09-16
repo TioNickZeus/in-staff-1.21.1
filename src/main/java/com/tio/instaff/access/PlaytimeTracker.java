@@ -27,8 +27,9 @@ public final class PlaytimeTracker {
     private static final String FILE_NAME = "playtime.json";
 
     private final Object lock = new Object();
+    private final Object ioLock = new Object();
     private final Map<UUID, Long> sessionStartTimes = new ConcurrentHashMap<>();
-    private final Map<UUID, PlaytimeData> dataStore = new HashMap<>();
+    private final Map<UUID, PlaytimeData> dataStore = new ConcurrentHashMap<>();
 
     public static class PlaytimeData {
         private UUID uuid;
@@ -95,9 +96,15 @@ public final class PlaytimeTracker {
     }
 
     public void save() {
+        Map<UUID, PlaytimeData> snapshot;
         synchronized (lock) {
-            FileStorageUtil.saveAtomicJson(getStoragePath(), dataStore);
+            snapshot = new HashMap<>(dataStore);
         }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            synchronized (ioLock) {
+                FileStorageUtil.saveAtomicJson(getStoragePath(), snapshot);
+            }
+        });
     }
 
     /**
@@ -138,11 +145,8 @@ public final class PlaytimeTracker {
      * Gets the total accumulated playtime in milliseconds, including live session time if online.
      */
     public long getTotalPlaytimeMillis(@NotNull UUID uuid) {
-        long accumulated;
-        synchronized (lock) {
-            PlaytimeData data = dataStore.get(uuid);
-            accumulated = (data != null) ? data.totalPlaytimeMillis : 0L;
-        }
+        PlaytimeData data = dataStore.get(uuid);
+        long accumulated = (data != null) ? data.totalPlaytimeMillis : 0L;
 
         Long sessionStart = sessionStartTimes.get(uuid);
         if (sessionStart != null) {
@@ -164,20 +168,16 @@ public final class PlaytimeTracker {
     }
 
     public long getFirstSeenEpoch(@NotNull UUID uuid) {
-        synchronized (lock) {
-            PlaytimeData data = dataStore.get(uuid);
-            return (data != null) ? data.firstSeenEpoch : 0L;
-        }
+        PlaytimeData data = dataStore.get(uuid);
+        return (data != null) ? data.firstSeenEpoch : 0L;
     }
 
     public long getLastSeenEpoch(@NotNull UUID uuid) {
         if (isOnline(uuid)) {
             return System.currentTimeMillis();
         }
-        synchronized (lock) {
-            PlaytimeData data = dataStore.get(uuid);
-            return (data != null) ? data.lastSeenEpoch : 0L;
-        }
+        PlaytimeData data = dataStore.get(uuid);
+        return (data != null) ? data.lastSeenEpoch : 0L;
     }
 
     public boolean isOnline(@NotNull UUID uuid) {
@@ -186,15 +186,11 @@ public final class PlaytimeTracker {
 
     @Nullable
     public PlaytimeData getPlaytimeData(@NotNull UUID uuid) {
-        synchronized (lock) {
-            return dataStore.get(uuid);
-        }
+        return dataStore.get(uuid);
     }
 
     @NotNull
     public Map<UUID, PlaytimeData> getAllData() {
-        synchronized (lock) {
-            return Collections.unmodifiableMap(new HashMap<>(dataStore));
-        }
+        return Collections.unmodifiableMap(new HashMap<>(dataStore));
     }
 }

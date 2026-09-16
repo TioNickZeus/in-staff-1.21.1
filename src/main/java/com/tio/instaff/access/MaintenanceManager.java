@@ -24,6 +24,7 @@ public final class MaintenanceManager {
     private static final String FILE_NAME = "maintenance.json";
 
     private final Object lock = new Object();
+    private final Object ioLock = new Object();
     private boolean enabled;
     private final Set<UUID> staffBypass = new HashSet<>();
     private String customMotd;
@@ -68,13 +69,17 @@ public final class MaintenanceManager {
     }
 
     public void save() {
+        MaintenanceSaveData data = new MaintenanceSaveData();
         synchronized (lock) {
-            MaintenanceSaveData data = new MaintenanceSaveData();
             data.enabled = this.enabled;
             data.staffBypass = new HashSet<>(this.staffBypass);
             data.customMotd = this.customMotd;
-            FileStorageUtil.saveAtomicJson(getStoragePath(), data);
         }
+        java.util.concurrent.CompletableFuture.runAsync(() -> {
+            synchronized (ioLock) {
+                FileStorageUtil.saveAtomicJson(getStoragePath(), data);
+            }
+        });
     }
 
     public boolean isMaintenance() {
