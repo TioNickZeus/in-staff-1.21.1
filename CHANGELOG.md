@@ -100,3 +100,11 @@ All notable changes to the In-Staff mod will be documented in this file.
 - **`maintenance.maxTempBanDays` is enforced.** `/tempban` previously ignored the configured cap entirely.
 - **Punishment announcements are no longer delivered twice to operators.** `sendSuccess(..., true)` and `broadcastSystemMessage` both reached operators; announcements now go out exactly once per recipient, with an audit log line.
 - Extended the test suite with regression coverage for the argument type, payload bounds and language file parity.
+
+### Fixed (Code Review: Final Polish & Concurrency)
+- **High Risk**: Decoupled `ModerationEventHandler` into `AccessEventHandler` (Whitelist/Maintenance) and `IntegrityEventHandler` (Client Handshake), enforcing single-responsibility and resolving tick-loop accumulation risks.
+- **High Risk**: Replaced standard collections with thread-safe data structures (`ConcurrentHashMap`, `CopyOnWriteArrayList`) in `PunishmentManager` and `PlaytimeTracker`.
+- **High Risk**: Implemented asynchronous disk I/O (`CompletableFuture.runAsync()`) across all data managers (`PunishmentManager`, `PlaytimeTracker`, `WhitelistManager`, `MaintenanceManager`, `BanItemManager`) to eliminate main tick thread blocking during mass player logins or bulk punishments.
+- **Medium Risk**: Wrapped sensitive tick loops (`ProtectionEventHandler`, `ModerationEventHandler`, `IntegrityEventHandler`) in defensive `try/catch` blocks to protect server stability from uncaught exceptions.
+- **Medium Risk**: Updated misleading Javadocs in `PunishmentRecord` and added persistence guarantees to `ChunkQuarantineHandler` logging.
+- **Low Risk**: Hardcoded language strings in `InvseeCommand`, `BanItemCommand`, and `PunishCommands` have been properly externalized to localization dictionaries (`en_us.json` and `pt_br.json`), including missing menu screen titles.
