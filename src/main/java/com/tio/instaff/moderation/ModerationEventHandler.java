@@ -38,30 +38,15 @@ public final class ModerationEventHandler {
     private ModerationEventHandler() {
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
 
         UUID uuid = player.getUUID();
-        boolean isStaff = player.hasPermissions(2);
 
-        // 1. Check Maintenance Mode
-        if (!MaintenanceManager.getInstance().isAllowed(uuid, isStaff)) {
-            player.connection.disconnect(LocalizationHelper.getMessage("instaff.maintenance.kick_message"));
-            return;
-        }
-
-        // 2. Check Smart Whitelist
-        if (WhitelistManager.getInstance().isEnabled() && !isStaff) {
-            if (!WhitelistManager.getInstance().isWhitelisted(uuid)) {
-                player.connection.disconnect(LocalizationHelper.getMessage("instaff.whitelist.kick_message"));
-                return;
-            }
-        }
-
-        // 3. Check Active Ban (UUID first)
+        // Check Active Ban (UUID first)
         Optional<PunishmentRecord> activeBan = PunishmentManager.getInstance().getActiveBan(uuid);
 
         // Offline Ban Evasion check: if not banned by UUID, check IP address
@@ -80,14 +65,7 @@ public final class ModerationEventHandler {
                         ban.getReason(), ban.getStaffName(), DurationParser.formatRemaining(ban.getExpiresAtEpoch()));
             }
             player.connection.disconnect(kickMessage);
-            return;
         }
-
-        // 4. Start Playtime Tracking
-        PlaytimeTracker.getInstance().onPlayerJoin(uuid, player.getGameProfile().getName());
-
-        // 5. Initiate Client Integrity Handshake
-        com.tio.instaff.network.ServerIntegrityValidator.getInstance().initiateHandshake(player);
     }
 
     @SubscribeEvent
@@ -95,11 +73,7 @@ public final class ModerationEventHandler {
         if (!(event.getEntity() instanceof ServerPlayer player)) {
             return;
         }
-
-        UUID uuid = player.getUUID();
-        PlaytimeTracker.getInstance().onPlayerLeave(uuid);
-        FREEZE_POSITIONS.remove(uuid);
-        com.tio.instaff.network.ServerIntegrityValidator.getInstance().onPlayerLeave(uuid);
+        FREEZE_POSITIONS.remove(player.getUUID());
     }
 
     @SubscribeEvent
@@ -125,9 +99,6 @@ public final class ModerationEventHandler {
             if (!(event.getEntity() instanceof ServerPlayer player)) {
                 return;
             }
-
-            // Integrity handshake timeout watchdog
-            com.tio.instaff.network.ServerIntegrityValidator.getInstance().tickWatchdog(player);
 
             UUID uuid = player.getUUID();
             if (PunishmentManager.getInstance().isFrozen(uuid)) {

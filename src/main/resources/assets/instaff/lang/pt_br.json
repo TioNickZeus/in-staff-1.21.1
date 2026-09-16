@@ -65,6 +65,8 @@
   "instaff.command.invsee.cannot_self": "§cVocê não pode inspecionar seu próprio inventário via /invsee.",
   "instaff.command.invsee.opened": "§aInspecionando inventário de §e%s §7(%s)§a.",
   "instaff.command.endersee.opened": "§aInspecionando Baú do Fim de §e%s §7(%s)§a.",
+  "instaff.screen.invsee.title": "Inventário: %s",
+  "instaff.screen.endersee.title": "Baú do Fim: %s",
   "instaff.command.invsee.not_found": "§cNão foi possível encontrar dados de inventário para '%s'.",
   "instaff.command.invsee.already_open": "§cAlguém já está inspecionando os dados offline de '%s'. Tente novamente em instantes.",
   "instaff.command.invsee.save_aborted": "§cAs alterações em §e%s§c foram descartadas: o jogador reconectou durante a inspeção.",

@@ -65,6 +65,8 @@
   "instaff.command.invsee.cannot_self": "§cYou cannot inspect your own inventory via /invsee.",
   "instaff.command.invsee.opened": "§aInspecting inventory of §e%s §7(%s)§a.",
   "instaff.command.endersee.opened": "§aInspecting Ender Chest of §e%s §7(%s)§a.",
+  "instaff.screen.invsee.title": "Inventory: %s",
+  "instaff.screen.endersee.title": "Ender Chest: %s",
   "instaff.command.invsee.not_found": "§cCould not locate player data for '%s'.",
   "instaff.command.invsee.already_open": "§cSomeone is already inspecting the offline data of '%s'. Try again shortly.",
   "instaff.command.invsee.save_aborted": "§cChanges to §e%s§c were discarded: the player reconnected during the inspection.",

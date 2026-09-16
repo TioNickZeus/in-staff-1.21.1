@@ -6,7 +6,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * Immutable/persistent record representing a moderation action (ban, mute, kick, freeze).
+ * Persistent record representing a moderation action (ban, mute, kick, freeze).
  * Stores audit metadata, expiration, and offline ban evasion markers (IP + client token).
  */
 public class PunishmentRecord {
