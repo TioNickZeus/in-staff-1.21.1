@@ -30,9 +30,9 @@ import java.util.UUID;
  */
 public final class PunishCommands {
 
-    private static final String DEFAULT_BAN_REASON = "Banned by an operator.";
-    private static final String DEFAULT_MUTE_REASON = "Muted by an operator.";
-    private static final String DEFAULT_KICK_REASON = "Kicked by an operator.";
+    private static final String DEFAULT_BAN_REASON = LocalizationHelper.getRawTranslation("instaff.punishment.default_ban_reason");
+    private static final String DEFAULT_MUTE_REASON = LocalizationHelper.getRawTranslation("instaff.punishment.default_mute_reason");
+    private static final String DEFAULT_KICK_REASON = LocalizationHelper.getRawTranslation("instaff.punishment.default_kick_reason");
 
     private PunishCommands() {
     }

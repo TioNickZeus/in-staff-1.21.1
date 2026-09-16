@@ -21,10 +21,10 @@ public final class PunishmentManager {
     private static final String FILE_NAME = "punishments_history.json";
 
     private final Object lock = new Object();
-    private final List<PunishmentRecord> history = new ArrayList<>();
-    private final Map<UUID, PunishmentRecord> activeBans = new HashMap<>();
-    private final Map<UUID, PunishmentRecord> activeMutes = new HashMap<>();
-    private final Set<UUID> frozenPlayers = new HashSet<>();
+    private final List<PunishmentRecord> history = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final Map<UUID, PunishmentRecord> activeBans = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<UUID, PunishmentRecord> activeMutes = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Set<UUID> frozenPlayers = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     private PunishmentManager() {
         load();
@@ -153,27 +153,26 @@ public final class PunishmentManager {
     }
 
     public boolean isFrozen(@NotNull UUID targetUUID) {
-        synchronized (lock) {
-            return frozenPlayers.contains(targetUUID);
-        }
+        return frozenPlayers.contains(targetUUID);
     }
 
     /**
      * Retrieves an active ban for the target UUID, expiring it if duration lapsed.
      */
     public Optional<PunishmentRecord> getActiveBan(@NotNull UUID targetUUID) {
-        synchronized (lock) {
-            PunishmentRecord record = activeBans.get(targetUUID);
-            if (record != null) {
-                if (record.isExpired()) {
-                    activeBans.remove(targetUUID);
-                    save();
-                    return Optional.empty();
+        PunishmentRecord record = activeBans.get(targetUUID);
+        if (record != null) {
+            if (record.isExpired()) {
+                synchronized (lock) {
+                    if (activeBans.remove(targetUUID, record)) {
+                        save();
+                    }
                 }
-                return Optional.of(record);
+                return Optional.empty();
             }
-            return Optional.empty();
+            return Optional.of(record);
         }
+        return Optional.empty();
     }
 
     /**
@@ -184,14 +183,12 @@ public final class PunishmentManager {
             return Optional.empty();
         }
 
-        synchronized (lock) {
-            for (PunishmentRecord record : activeBans.values()) {
-                if (record.isActive() && ipAddress.equals(record.getIpAddress())) {
-                    return Optional.of(record);
-                }
+        for (PunishmentRecord record : activeBans.values()) {
+            if (record.isActive() && ipAddress.equals(record.getIpAddress())) {
+                return Optional.of(record);
             }
-            return Optional.empty();
         }
+        return Optional.empty();
     }
 
     /**
@@ -202,32 +199,31 @@ public final class PunishmentManager {
             return Optional.empty();
         }
 
-        synchronized (lock) {
-            for (PunishmentRecord record : activeBans.values()) {
-                if (record.isActive() && token.equals(record.getClientToken())) {
-                    return Optional.of(record);
-                }
+        for (PunishmentRecord record : activeBans.values()) {
+            if (record.isActive() && token.equals(record.getClientToken())) {
+                return Optional.of(record);
             }
-            return Optional.empty();
         }
+        return Optional.empty();
     }
 
     /**
      * Retrieves an active mute for the target UUID, expiring it if duration lapsed.
      */
     public Optional<PunishmentRecord> getActiveMute(@NotNull UUID targetUUID) {
-        synchronized (lock) {
-            PunishmentRecord record = activeMutes.get(targetUUID);
-            if (record != null) {
-                if (record.isExpired()) {
-                    activeMutes.remove(targetUUID);
-                    save();
-                    return Optional.empty();
+        PunishmentRecord record = activeMutes.get(targetUUID);
+        if (record != null) {
+            if (record.isExpired()) {
+                synchronized (lock) {
+                    if (activeMutes.remove(targetUUID, record)) {
+                        save();
+                    }
                 }
-                return Optional.of(record);
+                return Optional.empty();
             }
-            return Optional.empty();
+            return Optional.of(record);
         }
+        return Optional.empty();
     }
 
     /**
@@ -235,15 +231,13 @@ public final class PunishmentManager {
      */
     @NotNull
     public List<PunishmentRecord> getHistory(@NotNull UUID targetUUID) {
-        synchronized (lock) {
-            List<PunishmentRecord> list = new ArrayList<>();
-            for (PunishmentRecord r : history) {
-                if (r.getTargetUUID().equals(targetUUID)) {
-                    list.add(r);
-                }
+        List<PunishmentRecord> list = new ArrayList<>();
+        for (PunishmentRecord r : history) {
+            if (r.getTargetUUID().equals(targetUUID)) {
+                list.add(r);
             }
-            return Collections.unmodifiableList(list);
         }
+        return Collections.unmodifiableList(list);
     }
 
     /**
@@ -253,18 +247,16 @@ public final class PunishmentManager {
      */
     @Nullable
     public String findLastKnownClientToken(@NotNull UUID targetUUID) {
-        synchronized (lock) {
-            for (int i = history.size() - 1; i >= 0; i--) {
-                PunishmentRecord r = history.get(i);
-                if (targetUUID.equals(r.getTargetUUID())) {
-                    String token = r.getClientToken();
-                    if (token != null && !token.isBlank()) {
-                        return token;
-                    }
+        for (int i = history.size() - 1; i >= 0; i--) {
+            PunishmentRecord r = history.get(i);
+            if (targetUUID.equals(r.getTargetUUID())) {
+                String token = r.getClientToken();
+                if (token != null && !token.isBlank()) {
+                    return token;
                 }
             }
-            return null;
         }
+        return null;
     }
 
     /**
@@ -272,8 +264,6 @@ public final class PunishmentManager {
      */
     @NotNull
     public List<PunishmentRecord> getAllHistory() {
-        synchronized (lock) {
-            return Collections.unmodifiableList(new ArrayList<>(history));
-        }
+        return Collections.unmodifiableList(new ArrayList<>(history));
     }
 }
