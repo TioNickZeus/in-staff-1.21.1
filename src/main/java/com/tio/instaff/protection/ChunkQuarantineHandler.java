@@ -122,6 +122,7 @@ public final class ChunkQuarantineHandler {
                 String causeString = (cause != null) ? (cause.getClass().getName() + ": " + cause.getMessage()) : "No stacktrace";
 
                 String entry = String.format("[%s] [%s] %s | Cause: %s%n", timestamp, category, message, causeString);
+                // Append mode is used to preserve the incident telemetry history across server restarts.
                 Files.writeString(logPath, entry, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             } catch (IOException e) {
                 InStaff.LOGGER.error("Failed to append to quarantine log: {}", logPath, e);
