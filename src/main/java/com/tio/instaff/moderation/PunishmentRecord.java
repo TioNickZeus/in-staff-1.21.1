@@ -32,6 +32,8 @@ public class PunishmentRecord {
     private String revokedByStaffName;
     private String revokeReason;
 
+    private transient long monotonicExpiry = 0;
+
     /**
      * Default constructor for Gson deserialization.
      */
@@ -58,17 +60,32 @@ public class PunishmentRecord {
         this.reason = (reason != null && !reason.isBlank()) ? reason : "No reason specified";
         this.createdAtEpoch = System.currentTimeMillis();
         this.expiresAtEpoch = (durationMillis <= 0 || durationMillis == -1) ? -1L : (this.createdAtEpoch + durationMillis);
+        
+        if (durationMillis <= 0 || durationMillis == -1) {
+            this.monotonicExpiry = -1L;
+        } else {
+            this.monotonicExpiry = net.minecraft.Util.getMillis() + durationMillis;
+        }
+        
         // Kicks are instantaneous events, not active ongoing states
         this.active = (type != PunishmentType.KICK);
         this.ipAddress = ipAddress;
         this.clientToken = clientToken;
     }
 
+    private long getMonotonicExpiry() {
+        if (this.monotonicExpiry == 0) {
+            long remaining = Math.max(0, this.expiresAtEpoch - System.currentTimeMillis());
+            this.monotonicExpiry = net.minecraft.Util.getMillis() + remaining;
+        }
+        return this.monotonicExpiry;
+    }
+
     public boolean isExpired() {
         if (expiresAtEpoch == -1L) {
             return false;
         }
-        return System.currentTimeMillis() >= expiresAtEpoch;
+        return getMonotonicExpiry() <= net.minecraft.Util.getMillis();
     }
 
     public boolean isActive() {
@@ -91,7 +108,7 @@ public class PunishmentRecord {
         if (expiresAtEpoch == -1L) {
             return -1L;
         }
-        long diff = expiresAtEpoch - System.currentTimeMillis();
+        long diff = getMonotonicExpiry() - net.minecraft.Util.getMillis();
         return Math.max(0L, diff);
     }
 
