@@ -51,3 +51,11 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Built `ChunkQuarantineHandler.java` providing zero-crash defensive shields for corrupted entities and block entities with persistent logging in `instaff/quarantine.log`.
 - Added localized messages for whitelist kicks and ban-item denials in `en_us.json` and `pt_br.json`.
 - Added comprehensive unit test suite in `Lote3ProtectionTest.java` (26 total tests across Lotes 1, 2, and 3, 100% pass rate).
+
+### Added (Batch 4: Inspection Engine & Offline NBT)
+- Implemented `ModMenus.java` registering `invsee` and `endersee` menu types using `IMenuTypeExtension`.
+- Implemented `InvseeMenu.java` providing full 41-slot container inspection (armor, offhand, main, and hotbar) with bidirectional shift-click transfer.
+- Implemented `EnderseeMenu.java` providing 27-slot Ender Chest inspection with bidirectional shift-click transfer.
+- Implemented `OfflinePlayerDataHelper.java` reading and writing `world/playerdata/<UUID>.dat` NBT directly with atomic `.tmp` swaps upon menu closure.
+- Implemented client screens `InvseeScreen.java` and `EnderseeScreen.java` under `com.tio.instaff.client.screen`, registered via `RegisterMenuScreensEvent` in `InStaffClient.java` with strict side separation.
+- Added comprehensive unit test suite in `Lote4InspectionTest.java` (29 total tests across Lotes 1-4, 100% pass rate).
