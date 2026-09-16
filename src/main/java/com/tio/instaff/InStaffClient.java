@@ -1,9 +1,11 @@
 package com.tio.instaff;
 
 import com.mojang.logging.LogUtils;
+import com.tio.instaff.client.integrity.ClientHashScanner;
 import com.tio.instaff.client.screen.EnderseeScreen;
 import com.tio.instaff.client.screen.InvseeScreen;
 import com.tio.instaff.inspection.ModMenus;
+import com.tio.instaff.network.InStaffNetwork;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
@@ -30,7 +32,8 @@ public final class InStaffClient {
         // Register client screens
         modEventBus.addListener(RegisterMenuScreensEvent.class, this::registerScreens);
 
-        // TODO: Register client integrity scanner handler (Lote 5)
+        // Register client integrity scanner handler
+        InStaffNetwork.clientRequestHandler = ClientHashScanner::handleIntegrityRequest;
     }
 
     private void registerScreens(RegisterMenuScreensEvent event) {

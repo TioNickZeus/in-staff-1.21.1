@@ -59,3 +59,11 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Implemented `OfflinePlayerDataHelper.java` reading and writing `world/playerdata/<UUID>.dat` NBT directly with atomic `.tmp` swaps upon menu closure.
 - Implemented client screens `InvseeScreen.java` and `EnderseeScreen.java` under `com.tio.instaff.client.screen`, registered via `RegisterMenuScreensEvent` in `InStaffClient.java` with strict side separation.
 - Added comprehensive unit test suite in `Lote4InspectionTest.java` (29 total tests across Lotes 1-4, 100% pass rate).
+
+### Added (Batch 5: Network Payloads & Client Integrity)
+- Implemented `IntegrityRequestPayload.java` and `IntegrityResponsePayload.java` with CustomPacketPayload and stream codecs.
+- Implemented `InStaffNetwork.java` registering payloads via `RegisterPayloadHandlersEvent` on mod event bus with decoupled client delegate to preserve strict side separation.
+- Built `ClientHashScanner.java` computing SHA-256 for all `.jar` files in `mods/`, collecting loaded mod IDs, and persisting unique installation tokens in `.instaff_token`.
+- Built `ServerIntegrityValidator.java` enforcing required mods, blacklisted mod IDs (`xray`, `baritone`, `freecam`), blacklisted SHA-256 hashes, offline ban evasion detection via client token matching, and handshake timeout watchdogs.
+- Connected integrity handshake initiation and watchdog tick into `ModerationEventHandler.java`.
+- Added comprehensive unit test suite in `Lote5NetworkTest.java` (34 total tests across Lotes 1-5, 100% pass rate).

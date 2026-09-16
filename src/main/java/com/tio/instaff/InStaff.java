@@ -27,5 +27,8 @@ public final class InStaff {
 
         // Inspection menus
         com.tio.instaff.inspection.ModMenus.register(modEventBus);
+
+        // Network payloads
+        com.tio.instaff.network.InStaffNetwork.register(modEventBus);
     }
 }
