@@ -32,3 +32,13 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Implemented `DurationParser.java` supporting monotonic time (`Util.getMillis()`), permanent durations, units (`s`, `m`, `h`, `d`, `w`, `mo`, `y`), composite strings, and duration formatting.
 - Implemented `TextUtil.java` with color code translation (`&` to `§`), formatting stripping, epoch formatting, and safe identity formatting.
 - Added comprehensive unit test suite in `Lote1CoreTest.java` (12 tests, 100% pass rate).
+
+### Added (Batch 2: Data Persistence & State Managers)
+- Implemented `FileStorageUtil.java` providing atomic `.tmp` file swaps (`Files.move(REPLACE_EXISTING)`), thread-safe JSON serialization, corrupt file backup, and zero server crash policy.
+- Created `PlayerResolver.java` enforcing local deterministic UUID lookups (`UUIDUtil.createOfflinePlayerUUID`) and local `GameProfileCache` queries with zero external Mojang HTTP calls.
+- Implemented `PunishmentRecord.java` POJO tracking audit metadata, expirations, and offline evasion detection fields (IP + client installation tokens).
+- Built `PunishmentManager.java` thread-safe moderation engine indexing active bans, mutes, freezes, and IP/token lookups with atomic persistence to `instaff/punishments_history.json`.
+- Built `MaintenanceManager.java` dynamic maintenance access controller supporting staff bypass and atomic persistence to `instaff/maintenance.json`.
+- Built `WhitelistManager.java` smart whitelist manager supporting dynamic reloads and atomic persistence to `instaff/whitelist.json`.
+- Built `PlaytimeTracker.java` tracking monotonic session durations (`Util.getMillis()`), historical totals, and last-seen telemetry in `instaff/playtime.json`.
+- Added comprehensive unit test suite in `Lote2PersistenceTest.java` (22 total tests across Lote 1 and 2, 100% pass rate).
