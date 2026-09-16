@@ -3,6 +3,10 @@ package com.tio.instaff.commands;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.StringReader;
+import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.tree.ArgumentCommandNode;
 import com.mojang.brigadier.tree.CommandNode;
 import com.tio.instaff.access.MaintenanceManager;
 import com.tio.instaff.access.PlaytimeTracker;
@@ -15,7 +19,9 @@ import com.tio.instaff.protection.BanItemMode;
 import com.tio.instaff.util.DurationParser;
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.ResourceLocationArgument;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.phys.Vec2;
 import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.BeforeEach;
@@ -302,7 +308,15 @@ class Lote6CommandsTest {
                 "instaff.command.history.entry",
                 "instaff.command.playtime.self",
                 "instaff.command.playtime.other",
-                "instaff.command.seen.result"
+                "instaff.command.seen.result",
+                // Player-facing punishment feedback: these were referenced by the commands
+                // but absent from both language files, so players saw the raw key.
+                "instaff.punishment.kicked",
+                "instaff.punishment.unmuted",
+                "instaff.error.duration_too_long",
+                "instaff.command.invsee.already_open",
+                "instaff.command.invsee.save_aborted",
+                "instaff.command.banitem.unknown_item"
         );
 
         @Test
@@ -325,11 +339,65 @@ class Lote6CommandsTest {
             }
         }
 
+        @Test
+        @DisplayName("en_us.json and pt_br.json expose exactly the same set of keys")
+        void testLanguageFilesAreInSync() {
+            Map<String, String> en = loadLangFile("/assets/instaff/lang/en_us.json");
+            Map<String, String> pt = loadLangFile("/assets/instaff/lang/pt_br.json");
+
+            Set<String> missingInPt = new TreeSet<>(en.keySet());
+            missingInPt.removeAll(pt.keySet());
+            assertTrue(missingInPt.isEmpty(), "pt_br.json is missing keys: " + missingInPt);
+
+            Set<String> missingInEn = new TreeSet<>(pt.keySet());
+            missingInEn.removeAll(en.keySet());
+            assertTrue(missingInEn.isEmpty(), "en_us.json is missing keys: " + missingInEn);
+        }
+
         private Map<String, String> loadLangFile(String resourcePath) {
             InputStream is = getClass().getResourceAsStream(resourcePath);
             assertNotNull(is, "Could not find resource: " + resourcePath);
             Type type = new TypeToken<Map<String, String>>() {}.getType();
             return new Gson().fromJson(new InputStreamReader(is, StandardCharsets.UTF_8), type);
+        }
+    }
+
+    @Nested
+    @DisplayName("Argument Type Tests")
+    class ArgumentTypeTests {
+
+        /**
+         * Regression guard: item arguments were declared as {@code StringArgumentType.word()},
+         * which cannot contain ':' — so no namespaced item ID could ever be entered, while
+         * BanItemManager keys its rules on the full "namespace:path" string.
+         */
+        @Test
+        @DisplayName("word() cannot represent a namespaced item ID")
+        void testWordArgumentStopsAtColon() throws CommandSyntaxException {
+            StringReader reader = new StringReader("minecraft:bedrock");
+            assertEquals("minecraft", StringArgumentType.word().parse(reader));
+            assertTrue(reader.canRead(), "word() must have stopped at the ':' separator");
+        }
+
+        @Test
+        @DisplayName("/banitem item arguments accept namespaced item IDs")
+        void testBanItemUsesResourceLocationArgument() throws CommandSyntaxException {
+            assertEquals(ResourceLocation.parse("minecraft:bedrock"),
+                    ResourceLocationArgument.id().parse(new StringReader("minecraft:bedrock")));
+
+            CommandNode<CommandSourceStack> banItemNode = dispatcher.getRoot().getChild("banitem");
+            for (String sub : List.of("add", "remove", "check")) {
+                CommandNode<CommandSourceStack> subNode = banItemNode.getChild(sub);
+                ArgumentCommandNode<CommandSourceStack, ?> itemNode = subNode.getChildren().stream()
+                        .filter(child -> child instanceof ArgumentCommandNode)
+                        .map(child -> (ArgumentCommandNode<CommandSourceStack, ?>) child)
+                        .filter(child -> "item".equals(child.getName()))
+                        .findFirst()
+                        .orElseThrow(() -> new AssertionError("/banitem " + sub + " has no 'item' argument"));
+
+                assertInstanceOf(ResourceLocationArgument.class, itemNode.getType(),
+                        "/banitem " + sub + " <item> must accept namespaced IDs");
+            }
         }
     }
 }

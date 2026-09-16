@@ -3,6 +3,7 @@ package com.tio.instaff.client.integrity;
 import com.tio.instaff.InStaff;
 import com.tio.instaff.network.IntegrityRequestPayload;
 import com.tio.instaff.network.IntegrityResponsePayload;
+import net.minecraft.client.Minecraft;
 import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -13,6 +14,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 /**
@@ -25,6 +30,15 @@ public final class ClientHashScanner {
 
     private static final String TOKEN_FILE = ".instaff_token";
     private static volatile String cachedToken = null;
+
+    /** Single daemon worker so a scan never blocks the client render thread. */
+    private static final ExecutorService SCAN_EXECUTOR = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "InStaff-Integrity-Scanner");
+        thread.setDaemon(true);
+        return thread;
+    });
+
+    private static final AtomicBoolean SCAN_IN_PROGRESS = new AtomicBoolean(false);
 
     private ClientHashScanner() {
     }
@@ -134,14 +148,40 @@ public final class ClientHashScanner {
     public static void handleIntegrityRequest(@NotNull IntegrityRequestPayload request) {
         InStaff.LOGGER.info("Received integrity verification request from server. Initiating client scan...");
 
+        if (!SCAN_IN_PROGRESS.compareAndSet(false, true)) {
+            InStaff.LOGGER.warn("Ignoring integrity request: a client scan is already running.");
+            return;
+        }
+
+        // Hashing every jar in mods/ is disk-bound and can take seconds on a large modpack.
+        // It must not run on the render thread, or the client freezes on join and may even
+        // blow the server's handshake timeout.
+        CompletableFuture
+                .supplyAsync(ClientHashScanner::buildResponse, SCAN_EXECUTOR)
+                .whenComplete((response, error) -> {
+                    SCAN_IN_PROGRESS.set(false);
+                    if (error != null || response == null) {
+                        InStaff.LOGGER.error("Client integrity scan failed; no response sent to server", error);
+                        return;
+                    }
+                    // Packets are dispatched back on the client main thread.
+                    Minecraft.getInstance().execute(() -> {
+                        if (Minecraft.getInstance().getConnection() == null) {
+                            InStaff.LOGGER.warn("Integrity scan finished after disconnect; response discarded.");
+                            return;
+                        }
+                        PacketDistributor.sendToServer(response);
+                        InStaff.LOGGER.info("Client integrity scan complete. Sent {} file hashes and {} loaded mod IDs to server.",
+                                response.modHashes().size(), response.loadedModIds().size());
+                    });
+                });
+    }
+
+    @NotNull
+    private static IntegrityResponsePayload buildResponse() {
         String token = getOrCreateInstallationToken();
         Map<String, String> hashes = scanModsDirectory();
         List<String> loadedModIds = collectLoadedModIds();
-
-        IntegrityResponsePayload response = new IntegrityResponsePayload(token, hashes, loadedModIds);
-        PacketDistributor.sendToServer(response);
-
-        InStaff.LOGGER.info("Client integrity scan complete. Sent {} file hashes and {} loaded mod IDs to server.",
-                hashes.size(), loadedModIds.size());
+        return new IntegrityResponsePayload(token, hashes, loadedModIds);
     }
 }
