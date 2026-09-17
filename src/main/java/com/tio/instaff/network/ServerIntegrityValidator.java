@@ -90,7 +90,7 @@ public final class ServerIntegrityValidator {
                             ban.getReason(), ban.getStaffName(), LocalizationHelper.getRawTranslation("instaff.common.permanent"));
                 } else {
                     kickMessage = LocalizationHelper.getMessage("instaff.punishment.tempbanned",
-                            ban.getReason(), ban.getStaffName(), DurationParser.formatRemaining(ban.getExpiresAtEpoch()));
+                            ban.getReason(), ban.getStaffName(), DurationParser.formatDuration(ban.getRemainingMillis()));
                 }
                 player.connection.disconnect(kickMessage);
                 return;

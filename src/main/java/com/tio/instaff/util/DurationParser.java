@@ -93,23 +93,7 @@ public final class DurationParser {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid duration string: '" + input + "'"));
     }
 
-    /**
-     * Calculates the future expiration timestamp in monotonic milliseconds (Util.getMillis() + duration).
-     * If duration is permanent, returns PERMANENT (-1L).
-     */
-    public static OptionalLong tryParseTargetExpiryMillis(@Nullable String input) {
-        OptionalLong duration = tryParseDurationMillis(input);
-        if (duration.isEmpty()) {
-            return OptionalLong.empty();
-        }
 
-        long millis = duration.getAsLong();
-        if (millis == PERMANENT) {
-            return OptionalLong.of(PERMANENT);
-        }
-
-        return OptionalLong.of(Util.getMillis() + millis);
-    }
 
     /**
      * Formats duration in milliseconds into a concise human-readable string (e.g. "1d 12h 30m").
@@ -145,22 +129,7 @@ public final class DurationParser {
         return sb.toString().trim();
     }
 
-    /**
-     * Formats remaining time until expiration (monotonic targetExpiryMillis - Util.getMillis()).
-     */
-    @NotNull
-    public static String formatRemaining(long targetExpiryMillis) {
-        if (targetExpiryMillis == PERMANENT) {
-            return LocalizationHelper.getRawTranslation("instaff.common.permanent");
-        }
 
-        long now = Util.getMillis();
-        long diff = targetExpiryMillis - now;
-        if (diff <= 0) {
-            return "0s";
-        }
-        return formatDuration(diff);
-    }
 
     private static long getUnitMultiplier(String unit) {
         if (unit.startsWith("mo")) return MONTH_MS;
