@@ -62,7 +62,7 @@ public final class ModerationEventHandler {
                         ban.getReason(), ban.getStaffName(), LocalizationHelper.getRawTranslation("instaff.common.permanent"));
             } else {
                 kickMessage = LocalizationHelper.getMessage("instaff.punishment.tempbanned",
-                        ban.getReason(), ban.getStaffName(), DurationParser.formatRemaining(ban.getExpiresAtEpoch()));
+                        ban.getReason(), ban.getStaffName(), DurationParser.formatDuration(ban.getRemainingMillis()));
             }
             player.connection.disconnect(kickMessage);
         }
@@ -88,7 +88,7 @@ public final class ModerationEventHandler {
             PunishmentRecord mute = activeMute.get();
             event.setCanceled(true);
 
-            String remaining = DurationParser.formatRemaining(mute.getExpiresAtEpoch());
+            String remaining = DurationParser.formatDuration(mute.getRemainingMillis());
             player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.punishment.muted", remaining, mute.getReason()));
         }
     }
