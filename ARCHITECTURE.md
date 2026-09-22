@@ -80,8 +80,7 @@ com.tio.instaff/
 ├── inspection/                      ← Inventory & container inspection (shared menus)
 │   ├── InvseeMenu.java              ← Custom AbstractContainerMenu synced with target player
 │   ├── EnderseeMenu.java            ← Custom menu synced with target EnderChest
-│   ├── OfflinePlayerDataHelper.java ← Safe NBT loading/writing for offline playerdata/*.dat
-│   └── CuriosIntegration.java       ← [Planned] Optional soft-dependency for Curios accessories
+│   └── OfflinePlayerDataHelper.java ← Safe NBT loading/writing for offline playerdata/*.dat
 ├── protection/                      ← Item restrictions and world health (server-side)
 │   ├── BanItemManager.java          ← Restricted item store and action validator
 │   ├── BanItemMode.java             ← Enum: TOTAL, NO_USE, NO_PLACE
@@ -94,6 +93,8 @@ com.tio.instaff/
     ├── DurationParser.java          ← Parses human duration strings ("1d12h", "30m", "7d")
     ├── LocalizationHelper.java      ← Server-side translations with en_us fallback
     └── TextUtil.java                ← Formatting helpers, timestamps, chat prefixes
+
+*Note: Curios accessory inspection is planned (see `ROADMAP.md`), but no files exist for it yet.*
 
 src/main/resources/assets/instaff/lang/
 ├── en_us.json                       ← English translations (mandatory fallback)
@@ -123,10 +124,14 @@ src/main/resources/assets/instaff/lang/
   - **Offline Servers (`online-mode=false`)**: Deterministic v3 UUIDs generated via `UUIDUtil.createOfflinePlayerUUID(playerName)` (`nameUUIDFromBytes("OfflinePlayer:" + name)`).
   - **Strict Invariant — Zero External Mojang HTTP Requests**: Never query `api.mojang.com` or external web APIs. On offline servers, external APIs return Mojang account UUIDs that do NOT match the server's local deterministic UUIDs, causing bans and data to target the wrong identity.
   - **Offline Ban Evasion Mitigation**: Because offline mode players can alter their launcher nickname to spawn with a fresh UUID, the moderation engine supports combining UUID bans with IP bans and client-side installation tokens exchanged during the `IntegrityResponsePayload` handshake.
+- **Data Location & Storage Limits**: 
+  - All JSON data (like `punishments_history.json` and `playtime.json`) is stored in the **server root directory** (`<server_root>/instaff/`), NOT inside the `world/` folder. Backups must include this root folder.
+  - The JSON stores are completely rewritten to disk (`.tmp` atomic swap) on every save. There is currently no size limit, rotation, archival, or schema versioning (missing fields use Gson defaults).
+- **Concurrency Model**: The engine uses a thread-safe `CopyOnWriteArrayList` for history and `ConcurrentHashMap` for active index maps and frozen players. Async disk writes are guarded by an `ioLock`.
 - **Punishment Lifecycle**:
-  - **Bans**: Intercepted in `PlayerEvent.PlayerLoggedInEvent`. If an active ban exists, the player is immediately disconnected (`player.connection.disconnect(...)`) with a styled Component showing the ban reason, issuer name, and expiry timestamp.
-  - **Mutes**: Intercepted in `ServerChatEvent` and private message commands (`/tell`, `/msg`, `/w`). Blocked messages notify the muted player with remaining time.
-  - **Freezes**: Server-side: clamps movement in `PlayerTickEvent`, preventing position changes and interactions. Client-side: suppresses camera rotation and movement input to prevent jitter.
+  - **Bans**: Enforced in real-time when `/ban` or `/tempban` is executed (immediately kicking online players), and intercepted during `PlayerEvent.PlayerLoggedInEvent`.
+  - **Mutes**: Intercepted in `ServerChatEvent` and private message commands (`/tell`, `/msg`, `/w`). *Known bypasses:* currently does not block text in books, signs, or anvil renames.
+  - **Freezes**: Server-side: clamps movement in `PlayerTickEvent`, and strictly cancels all interactions (breaking/placing blocks, attacking, item interactions) via `PlayerInteractEvent` and `BlockEvent`. Client-side: suppresses camera rotation and movement input to prevent jitter.
 - **Audit History**: Every sanction (active or expired) remains recorded in `instaff/punishments_history.json` for staff auditing via `/history <player>`.
 
 ### 3.2 Access & Maintenance (`access/`)
@@ -141,6 +146,7 @@ src/main/resources/assets/instaff/lang/
 - **Playtime Tracker**:
   - Captures `loginTime` on `PlayerEvent.PlayerLoggedInEvent`.
   - Accumulates session elapsed time on `PlayerEvent.PlayerLoggedOutEvent` into `instaff/playtime.json`.
+  - *Note:* There is no `ServerStoppingEvent` hook or autosave. If the server crashes or stops forcefully, any in-progress playtime for currently online players is lost.
 
 ### 3.3 Inspection & Invsee (`inspection/`)
 
@@ -187,7 +193,8 @@ The client integrity system verifies that connecting clients are running an appr
       │                                         │
       │<───── IntegrityResponsePayload ─────────│
       │       (client sends back manifest:      │
-      │        filename → SHA-256 hash)         │
+      │        filename → SHA-256 hash, plus    │
+      │        an installation token)           │
       │                                         │
       │  3. Server validates:                   │
       │     - Required mods present?            │
@@ -211,6 +218,8 @@ The client integrity system verifies that connecting clients are running an appr
 
 #### Security Notes
 
+- **Payload Bounds & Negotiation:** The integrity response payload is strictly bounded (`MAX_ENTRIES = 4096`, `MAX_STRING_LENGTH = 512`) to prevent memory exhaustion by malicious clients. There is no payload version negotiation; mismatched versions will fail unpredictably.
+- **Installation Token:** The `IntegrityResponsePayload` passes a client token which is saved in `PunishmentRecord`s. This deters offline ban evasion by matching tokens on future connections.
 - The hash scan runs on the **client JVM** and the server trusts the response. A determined cheater could patch the mod to lie. This is a **deterrent**, not a cryptographic proof. It raises the bar significantly beyond "just install X-Ray".
 - For higher security, combine with server-side detection (ore mining pattern analysis, movement anomaly detection).
 
@@ -226,3 +235,10 @@ The client integrity system verifies that connecting clients are running an appr
 6. **Complete Internationalization**: Every player-facing message must use `LocalizationHelper` and be defined in both `en_us.json` and `pt_br.json`.
 7. **Side Separation**: Server code must never import from `com.tio.instaff.client.*`. Client code accesses shared types from `network/`, `inspection/`, and `util/` only.
 8. **Offline-Mode (`online-mode=false`) Integrity**: All UUID resolution must remain strictly local and deterministic (`server.getProfileCache()` or `UUIDUtil.createOfflinePlayerUUID`). External HTTP requests to Mojang APIs are strictly forbidden. Moderation and access systems must implement IP and client-token associations to mitigate offline ban evasion.
+
+---
+
+## 5. Testing Strategy
+
+- **Automated Tests**: Basic command parsing and invocation flows are tested via unit tests (e.g., `Lote6CommandsTest.java`).
+- **Manual QA**: Due to the nature of client/server syncing, GUI screens, and packet interception, manual validation with connected clients is currently heavily relied upon for feature verification.

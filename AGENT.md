@@ -112,7 +112,49 @@ Brief 1-3 sentence summary of the problem solved and the approach taken.
 
 ---
 
-## 4. Key File Index
+## 4. Surgical Editing & Anti-Rewrite Policy
+
+Working code is a liability to break, not an invitation to improve. Every agent must treat existing functional code as **load-bearing until proven otherwise**, and edit it with the smallest possible footprint.
+
+1. **Minimal Diff Principle**:
+   - Touch only the lines strictly required to satisfy the task. Do not reformat, reorder imports, rename variables, or "clean up" code that isn't part of the requested change.
+   - Prefer targeted patches (find-and-replace on the exact block) over regenerating a whole file, class, or method — even when it would be faster to write from scratch.
+   - If the required change touches more than ~30% of a file, stop and confirm scope with the maintainer before proceeding.
+2. **No Drive-By Refactors**:
+   - Noticing an unrelated smell, dead code, or a "better way to do it" while working on a feature/fix is **not** license to change it in the same commit.
+   - Log it instead: add an entry to `KNOWN_ISSUES.md` (if it's a risk) or `ROADMAP.md` (if it's an improvement), and leave the code untouched.
+   - Refactors are only performed in a dedicated `refactor/` or `chore/` branch, requested explicitly.
+3. **Read Before You Write**:
+   - Always read the full method/class — and, when relevant, its call sites — before editing it. Never patch code you haven't fully read in the current session.
+   - Re-read a file immediately before editing it if any prior edit in the session may have changed its state.
+4. **Preserve Public Contracts**:
+   - Method signatures, payload record shapes (`network/`), config keys, OP level requirements, and command syntax must not change unless the task explicitly requires it.
+   - If a signature or config key must change, document every call site updated and flag it under "Breaking Changes / Invariants" in the PR (see §3.2).
+5. **Match Existing Patterns, Don't Impose New Ones**:
+   - Follow the file's existing style, naming, and idioms even if the agent would personally structure it differently. Consistency with the surrounding codebase outranks personal/model preference.
+   - New patterns (e.g. a different exception-handling style, a new manager pattern) are only introduced with explicit approval, and then applied consistently, not as a one-off.
+6. **One Concern Per Change**:
+   - A single commit/PR addresses one feature, one fix, or one refactor — never a mix. Mixing a rewrite with a behavioral fix makes the diff impossible to review safely.
+7. **Justify Behavioral Changes**:
+   - If a change alters observable behavior (timing, message wording, default config value, command output), state the "why" explicitly in the commit body and PR description — never as a silent side effect of a rewrite.
+8. **When In Doubt, Ask — Don't Rewrite**:
+   - If the correct minimal edit is unclear, ask the maintainer rather than defaulting to a broader rewrite "to be safe." A rewrite is never the safe option for functional code.
+
+---
+
+## 5. General Operating Discipline
+
+1. **Fail Loud, Not Silent**: if requirements, config defaults, or expected behavior are ambiguous, ask before proceeding. Never guess silently and ship a plausible-looking assumption.
+2. **No Scope Creep**: implement exactly what was asked. Additional features, extra config options, or "while I'm here" additions belong in `ROADMAP.md`, not in the diff.
+3. **Invariant Guard**: before finalizing any change, re-check it against the invariants in §1. A change that satisfies the immediate request but violates an invariant is not acceptable.
+4. **Verify, Don't Assume**: run `./gradlew compileJava --no-daemon` after any non-trivial edit, not only before opening the PR. Don't assume a change compiles because it "looks right."
+5. **Idempotent, Reversible Actions**: prefer changes that are easy to revert cleanly (a self-contained commit) over changes entangled with unrelated edits.
+6. **Traceability**: every non-obvious decision (why this approach over an alternative) gets one line in the commit body or PR description — future agents and maintainers should not have to reverse-engineer intent.
+7. **Respect the SSOT**: `ARCHITECTURE.md` is authoritative for structure, `AGENT.md` for process. If code and docs disagree, flag the discrepancy rather than silently trusting either one.
+
+---
+
+## 6. Key File Index
 
 | File | Purpose | Rule for Agents |
 |:---|:---|:---|

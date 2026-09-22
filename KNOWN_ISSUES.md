@@ -17,7 +17,8 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ### 1. Anti-Cheat & Client Integrity Bypasses
 * `[Pending Testing]` — **Mod Spoofing:** A sophisticated user could compile a cheat client into a custom `.jar` and change the internal mod ID to match something benign (e.g., `jei`) to bypass both the blacklist and the hash check.
-* `[Pending Testing]` — **Token Scrubbing:** If a banned player uses a VPN (to change their IP) and manually deletes the `.instaff_token` file, they might bypass the offline evasion check.
+* `[Pending Testing]` — **Token Scrubbing:** If a banned player uses a VPN (to change their IP) and manually deletes the `.instaff_token` file (or reinstalls their modpack), they will bypass the offline evasion check as a new token will be generated.
+* `[Confirmed]` — **Payload Versioning:** There is no payload version negotiation during the integrity handshake. Mismatched client/server versions will fail unpredictably (decoder exceptions) rather than providing a clean disconnect message to the player.
 
 ### 2. Inventory Inspection (`/invsee`) Concurrency
 * `[Pending Testing]` — **Simultaneous Interaction Desync:** If an admin is manipulating a live player's inventory via `/invsee` at the exact same millisecond the player drops the item (pressing `Q`) or opens a chest, there could be a visual state desync.
@@ -25,15 +26,22 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ### 3. Playtime & I/O Async Edge Cases
 * `[Pending Testing]` — **Abrupt Shutdown Data Loss:** If the server process is forcefully killed (e.g., power outage) exactly between the data snapshot and the async thread writing to `.tmp`, a few seconds of data might be lost. Ensure the rollback mechanism is atomic and works.
+* `[Confirmed]` — **Clean Shutdown Data Loss:** The `PlaytimeTracker` lacks a `ServerStoppingEvent` hook. If the server is stopped normally (e.g., via `/stop`), online players do not trigger `PlayerLoggedOutEvent` and their entire current session playtime is lost.
 
 ### 4. Offline-Mode Identity Collisions
 * `[Pending Testing]` — **Same-Name Conflict:** If a premium player named "Notch" and a cracked player named "Notch" join at different times, they share the same UUID, inventory, and permissions. Check if they inherit the same punishment records (expected behavior, but needs testing).
 
 ### 5. Chat & Mute Bypasses
 * `[Confirmed]` — **Command Chat Bypass:** The `/mute` system currently only intercepts `ServerChatEvent`. Players can bypass mutes by using chat-related commands such as `/msg`, `/me`, or third-party chat mod commands like `/g`, `/global`, because these fire as `CommandEvent` instead.
+* `[Confirmed]` — **Item Text Bypass:** Muted players can still write in books, place signs with text, and rename items in anvils, as these events are not currently intercepted.
 
 ### 6. Client Rendering & Visuals
 * `[Confirmed]` — **GUI Misalignment in `/invsee`:** The slot placement coordinates for the target's inventory (armor, offhand, main) and the staff's own inventory do not align perfectly with the background container texture.
+
+### 7. Scalability & Performance
+* `[Confirmed]` — **Unbounded JSON Growth & Full File Rewrite:** `punishments_history.json` and `playtime.json` are completely rewritten to disk (`.tmp` swap) on every save. There is no rotation or archival limit, meaning write times will increase linearly as the server ages.
+* `[Confirmed]` — **In-Memory History List:** `PunishmentManager` uses a `CopyOnWriteArrayList` for the entire punishment history. On servers with thousands of records, the array copy on every new punishment will become a performance bottleneck.
+* `[Confirmed]` — **Linear Token Indexing:** `findLastKnownClientToken` performs a linear scan through the entire punishment history from end to start, which shares the scalability concerns of the unbounded JSON growth.
 
 ---
 
