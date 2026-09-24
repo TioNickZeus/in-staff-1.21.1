@@ -142,8 +142,7 @@ public final class ProtectionEventHandler {
                 player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.banitem.confiscated"));
             }
         } catch (Throwable t) {
-            System.err.println("[In-Staff] Error in ProtectionEventHandler.onPlayerTick: " + t.getMessage());
-            t.printStackTrace();
+            InStaff.LOGGER.error("[In-Staff] Error in ProtectionEventHandler.onPlayerTick", t);
         }
     }
 }

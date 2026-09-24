@@ -118,8 +118,7 @@ public final class ModerationEventHandler {
                 FREEZE_POSITIONS.remove(uuid);
             }
         } catch (Throwable t) {
-            System.err.println("[In-Staff] Error in ModerationEventHandler.onPlayerTick: " + t.getMessage());
-            t.printStackTrace();
+            InStaff.LOGGER.error("[In-Staff] Error in ModerationEventHandler.onPlayerTick", t);
         }
     }
 

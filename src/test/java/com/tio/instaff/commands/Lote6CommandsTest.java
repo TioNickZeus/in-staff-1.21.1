@@ -69,7 +69,7 @@ class Lote6CommandsTest {
                     "kick", "freeze",
                     "maintenance",
                     "swhitelist",
-                    "invsee", "endersee",
+                    "isinvsee", "isendersee",
                     "banitem",
                     "history", "checkpunish",
                     "playtime", "seen"
@@ -148,7 +148,7 @@ class Lote6CommandsTest {
             List<String> opCommands = List.of(
                     "staff", "instaff", "ban", "tempban", "unban",
                     "mute", "tempmute", "unmute", "kick", "freeze",
-                    "maintenance", "swhitelist", "invsee", "endersee",
+                    "maintenance", "swhitelist", "isinvsee", "isendersee",
                     "banitem", "history", "checkpunish", "seen"
             );
 

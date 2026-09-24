@@ -44,7 +44,7 @@ public final class InvseeCommand {
     }
 
     private static void registerInvsee(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("invsee")
+        dispatcher.register(Commands.literal("isinvsee")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))
@@ -116,7 +116,7 @@ public final class InvseeCommand {
     }
 
     private static void registerEndersee(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("endersee")
+        dispatcher.register(Commands.literal("isendersee")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))

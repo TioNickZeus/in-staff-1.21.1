@@ -80,7 +80,7 @@ public final class PunishCommands {
         if (targetPlayer != null) {
             MutableComponent kickMessage = LocalizationHelper.getMessage("instaff.punishment.banned",
                     reason, staffName, LocalizationHelper.getRawTranslation("instaff.common.permanent"));
-            targetPlayer.connection.disconnect(kickMessage);
+            PunishmentManager.getInstance().disconnectPlayer(targetPlayer, kickMessage);
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.ban.success", targetName, reason);
@@ -138,7 +138,7 @@ public final class PunishCommands {
         if (targetPlayer != null) {
             MutableComponent kickMessage = LocalizationHelper.getMessage("instaff.punishment.tempbanned",
                     reason, staffName, formattedDuration);
-            targetPlayer.connection.disconnect(kickMessage);
+            PunishmentManager.getInstance().disconnectPlayer(targetPlayer, kickMessage);
         }
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.tempban.success", targetName, formattedDuration, reason);
@@ -312,7 +312,7 @@ public final class PunishCommands {
         );
         PunishmentManager.getInstance().addPunishment(record);
 
-        targetPlayer.connection.disconnect(LocalizationHelper.getMessage("instaff.punishment.kicked", reason, staffName));
+        PunishmentManager.getInstance().disconnectPlayer(targetPlayer, LocalizationHelper.getMessage("instaff.punishment.kicked", reason, staffName));
 
         MutableComponent successMsg = LocalizationHelper.getPrefixedMessage("instaff.command.kick.success", targetName, reason);
         announce(source, server, successMsg);
