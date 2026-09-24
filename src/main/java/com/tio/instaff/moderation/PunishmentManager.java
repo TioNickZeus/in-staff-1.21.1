@@ -273,4 +273,11 @@ public final class PunishmentManager {
     public List<PunishmentRecord> getAllHistory() {
         return Collections.unmodifiableList(new ArrayList<>(history));
     }
+
+    /**
+     * Delegates the actual network disconnection to the moderation engine, keeping commands clean.
+     */
+    public void disconnectPlayer(@NotNull net.minecraft.server.level.ServerPlayer player, @NotNull net.minecraft.network.chat.Component reason) {
+        player.connection.disconnect(reason);
+    }
 }
