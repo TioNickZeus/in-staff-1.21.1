@@ -37,8 +37,7 @@ public final class IntegrityEventHandler {
                 ServerIntegrityValidator.getInstance().tickWatchdog(player);
             }
         } catch (Throwable t) {
-            System.err.println("[In-Staff] Error in IntegrityEventHandler.onPlayerTick: " + t.getMessage());
-            t.printStackTrace();
+            InStaff.LOGGER.error("[In-Staff] Error in IntegrityEventHandler.onPlayerTick", t);
         }
     }
 }
