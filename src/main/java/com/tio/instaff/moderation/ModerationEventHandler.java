@@ -4,6 +4,7 @@ import com.tio.instaff.InStaff;
 import com.tio.instaff.access.MaintenanceManager;
 import com.tio.instaff.access.PlaytimeTracker;
 import com.tio.instaff.access.WhitelistManager;
+import com.tio.instaff.config.InStaffConfig;
 import com.tio.instaff.util.DurationParser;
 import com.tio.instaff.util.LocalizationHelper;
 import com.tio.instaff.util.TextUtil;
@@ -12,12 +13,15 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
+import net.neoforged.neoforge.event.CommandEvent;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -88,6 +92,63 @@ public final class ModerationEventHandler {
             PunishmentRecord mute = activeMute.get();
             event.setCanceled(true);
 
+            String remaining = DurationParser.formatDuration(mute.getRemainingMillis());
+            player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.punishment.muted", remaining, mute.getReason()));
+        }
+    }
+
+    @SubscribeEvent
+    public static void onCommandEvent(CommandEvent event) {
+        if (event.getParseResults() == null || event.getParseResults().getContext() == null) {
+            return;
+        }
+
+        if (!(event.getParseResults().getContext().getSource().getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        Optional<PunishmentRecord> activeMute = PunishmentManager.getInstance().getActiveMute(player.getUUID());
+        if (activeMute.isEmpty()) {
+            return;
+        }
+
+        var nodes = event.getParseResults().getContext().getNodes();
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+
+        String commandName = nodes.get(0).getNode().getName();
+        if (commandName == null || commandName.isBlank()) {
+            return;
+        }
+
+        String normalized = commandName.toLowerCase(Locale.ROOT);
+        if (normalized.startsWith("minecraft:")) {
+            normalized = normalized.substring("minecraft:".length());
+        }
+
+        List<? extends String> blockedCommands = InStaffConfig.getBlockedMuteCommands();
+        boolean isBlocked = false;
+        for (String blocked : blockedCommands) {
+            if (blocked == null) {
+                continue;
+            }
+            String normalizedBlocked = blocked.toLowerCase(Locale.ROOT).trim();
+            if (normalizedBlocked.startsWith("/")) {
+                normalizedBlocked = normalizedBlocked.substring(1);
+            }
+            if (normalizedBlocked.startsWith("minecraft:")) {
+                normalizedBlocked = normalizedBlocked.substring("minecraft:".length());
+            }
+            if (normalized.equals(normalizedBlocked)) {
+                isBlocked = true;
+                break;
+            }
+        }
+
+        if (isBlocked) {
+            event.setCanceled(true);
+            PunishmentRecord mute = activeMute.get();
             String remaining = DurationParser.formatDuration(mute.getRemainingMillis());
             player.sendSystemMessage(LocalizationHelper.getPrefixedMessage("instaff.punishment.muted", remaining, mute.getReason()));
         }

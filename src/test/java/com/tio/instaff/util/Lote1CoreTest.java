@@ -37,6 +37,7 @@ class Lote1CoreTest {
             assertNotNull(InStaffConfig.getBlacklistedHashes());
             assertEquals(3, InStaffConfig.getBlacklistedModIds().size());
             assertTrue(InStaffConfig.getBlacklistedModIds().contains("xray"));
+            assertNotNull(InStaffConfig.getBlockedMuteCommands());
         }
     }
 
