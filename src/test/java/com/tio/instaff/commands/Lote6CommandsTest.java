@@ -64,7 +64,7 @@ class Lote6CommandsTest {
         void testRootCommandsRegistered() {
             Set<String> expectedRoots = Set.of(
                     "staff", "instaff",
-                    "ban", "tempban", "unban",
+                    "isban", "istempban", "isunban",
                     "mute", "tempmute", "unmute",
                     "kick", "freeze",
                     "maintenance",
@@ -146,7 +146,7 @@ class Lote6CommandsTest {
             CommandSourceStack op = createSource(2);
 
             List<String> opCommands = List.of(
-                    "staff", "instaff", "ban", "tempban", "unban",
+                    "staff", "instaff", "isban", "istempban", "isunban",
                     "mute", "tempmute", "unmute", "kick", "freeze",
                     "maintenance", "swhitelist", "isinvsee", "isendersee",
                     "banitem", "history", "checkpunish", "seen"

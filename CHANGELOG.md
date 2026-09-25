@@ -8,15 +8,19 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Implemented `CommandEvent` interception in `ModerationEventHandler.java` to prevent muted players from using chat-related commands (`/msg`, `/tell`, `/w`, `/r`, `/reply`, `/me`, `/g`, `/global`).
 - Added configurable `blockedMuteCommands` string list in `InStaffConfig.java` (`moderation` section) with defensive accessor guarded by `SPEC.isLoaded()`.
 - Implemented `PunishmentCheckConfigurationTask.java` and `ConfigurationTaskHandler.java` executing on NeoForge's `RegisterConfigurationTasksEvent` (network configuration phase) to disconnect banned players before world spawn and join broadcasts.
+- Implemented `AccessCheckConfigurationTask.java` executing during the network configuration phase to disconnect unauthorized players before world spawn and join broadcasts when Maintenance mode or Smart Whitelist is active.
 - Implemented `MachineIdFetcher.java` (`com.tio.instaff.client.integrity`) providing deterministic SHA-256 fallback installation tokens when `.instaff_token` is scrubbed, based on OS hardware identifiers (`MachineGuid` on Windows, `/etc/machine-id` on Linux, `IOPlatformUUID` on macOS).
 - Added `BanEvasionMode.java` enum (`STRICT`, `IP_ONLY`, `TOKEN_ONLY`, `OFF`) granting server administrators granular control over offline ban evasion enforcement.
-- Added comprehensive unit tests (`MachineIdFetcherTest.java` and `BanEvasionModeTest.java`) validating SHA-256 determinism, hardware isolation, OS regex parsing, and privacy sanitization.
+- Added comprehensive unit tests (`MachineIdFetcherTest.java`, `BanEvasionModeTest.java`, and `AccessCheckConfigurationTaskTest.java`) validating SHA-256 determinism, hardware isolation, OS regex parsing, privacy sanitization, and configuration task fail-safes.
 
 ### Changed
 - Replaced boolean `preventOfflineBanEvasion` config setting with `banEvasionMode = "STRICT"` in `InStaffConfig.java` (`moderation` section).
 - Updated `PunishmentManager.java` and `ServerIntegrityValidator.java` to evaluate IP and token ban matches according to `isIpBanEvasionEnabled()` and `isTokenBanEvasionEnabled()`.
 - Enhanced `ClientHashScanner.getOrCreateInstallationToken()` to use in-memory transient tokens without writing to disk upon transient OS query errors or timeouts (1s timeout ceiling).
 - Removed redundant late ban check from `ModerationEventHandler.java`'s `PlayerLoggedInEvent`.
+- Removed redundant late maintenance and whitelist disconnect checks from `AccessEventHandler.java`'s `PlayerLoggedInEvent`, preserving only playtime session tracking.
+- Renamed moderation ban commands from `/ban`, `/tempban`, `/unban` to `/isban`, `/istempban`, `/isunban` in `PunishCommands.java` to eliminate collisions with vanilla server commands while retaining standard syntax and permissions.
+- Synchronized all command help strings and documentation in `en_us.json`, `pt_br.json`, `README.md`, and `Lote6CommandsTest.java` to reference `/isinvsee`, `/isendersee`, `/isban`, `/istempban`, and `/isunban`.
 
 ## [1.0.0] - Unreleased
 
