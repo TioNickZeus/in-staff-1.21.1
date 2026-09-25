@@ -19,6 +19,7 @@ public final class InStaffConfig {
     public static final ModConfigSpec.BooleanValue PREVENT_OFFLINE_BAN_EVASION;
     public static final ModConfigSpec.ConfigValue<String> DEFAULT_MUTE_DURATION;
     public static final ModConfigSpec.IntValue MAX_TEMP_BAN_DAYS;
+    public static final ModConfigSpec.ConfigValue<List<? extends String>> BLOCKED_MUTE_COMMANDS;
 
     // Maintenance
     public static final ModConfigSpec.BooleanValue MAINTENANCE_ENABLED;
@@ -53,6 +54,10 @@ public final class InStaffConfig {
         MAX_TEMP_BAN_DAYS = BUILDER
                 .comment("Maximum duration in days allowed for temporary bans.")
                 .defineInRange("maxTempBanDays", 365, 1, 36500);
+
+        BLOCKED_MUTE_COMMANDS = BUILDER
+                .comment("List of command names blocked for muted players (e.g., 'msg', 'tell', 'me').")
+                .defineList("blockedMuteCommands", List.of("msg", "tell", "w", "r", "reply", "me", "g", "global"), o -> o instanceof String);
         BUILDER.pop();
 
         BUILDER.comment("In-Staff Maintenance Settings").push("maintenance");
@@ -122,6 +127,10 @@ public final class InStaffConfig {
 
     public static int getMaxTempBanDays() {
         return SPEC.isLoaded() ? MAX_TEMP_BAN_DAYS.get() : 365;
+    }
+
+    public static List<? extends String> getBlockedMuteCommands() {
+        return SPEC.isLoaded() ? BLOCKED_MUTE_COMMANDS.get() : List.of();
     }
 
     public static boolean isMaintenanceEnabled() {

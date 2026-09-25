@@ -32,8 +32,9 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 * `[Pending Testing]` — **Same-Name Conflict:** If a premium player named "Notch" and a cracked player named "Notch" join at different times, they share the same UUID, inventory, and permissions. Check if they inherit the same punishment records (expected behavior, but needs testing).
 
 ### 5. Chat & Mute Bypasses
-* `[Confirmed]` — **Command Chat Bypass:** The `/mute` system currently only intercepts `ServerChatEvent`. Players can bypass mutes by using chat-related commands such as `/msg`, `/me`, or third-party chat mod commands like `/g`, `/global`, because these fire as `CommandEvent` instead.
+* `[Resolved]` — **Command Chat Bypass:** The `/mute` system previously only intercepted `ServerChatEvent`. Intercepted via `CommandEvent` in `ModerationEventHandler` with configurable `blockedMuteCommands` in `InStaffConfig`.
 * `[Confirmed]` — **Item Text Bypass:** Muted players can still write in books, place signs with text, and rename items in anvils, as these events are not currently intercepted.
+* `[Confirmed]` — **Punishment Overwrite Audit Pollution (Mute/Ban Stacking):** Executing `/mute`, `/tempmute`, `/ban`, or `/tempban` on an already sanctioned player overwrites the in-memory active map, but does not mark the previous record as revoked in `punishments_history.json`. As a result, multiple active sanctions for the same player display as `[ACTIVE]` concurrently in `/history`.
 
 ### 6. Client Rendering & Visuals
 * `[Confirmed]` — **GUI Misalignment in `/invsee`:** The slot placement coordinates for the target's inventory (armor, offhand, main) and the staff's own inventory do not align perfectly with the background container texture.
@@ -42,6 +43,9 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 * `[Confirmed]` — **Unbounded JSON Growth & Full File Rewrite:** `punishments_history.json` and `playtime.json` are completely rewritten to disk (`.tmp` swap) on every save. There is no rotation or archival limit, meaning write times will increase linearly as the server ages.
 * `[Confirmed]` — **In-Memory History List:** `PunishmentManager` uses a `CopyOnWriteArrayList` for the entire punishment history. On servers with thousands of records, the array copy on every new punishment will become a performance bottleneck.
 * `[Confirmed]` — **Linear Token Indexing:** `findLastKnownClientToken` performs a linear scan through the entire punishment history from end to start, which shares the scalability concerns of the unbounded JSON growth.
+
+### 8. Command Conflicts & Collision
+* `[Confirmed]` — **Vanilla Command Collision (`/ban`):** In-Staff's `/ban` command collides directly with vanilla Minecraft's built-in `/ban` command (`BanPlayerCommands`). The vanilla dispatcher node takes precedence, preventing In-Staff's `/ban` handler from executing, while `/tempban` functions correctly due to lack of a vanilla counterpart. Requires command collision mitigation (e.g., prefixing `/isban` or overriding vanilla command tree).
 
 ---
 

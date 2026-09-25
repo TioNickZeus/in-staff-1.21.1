@@ -2,6 +2,12 @@
 
 All notable changes to the In-Staff mod will be documented in this file.
 
+## [1.1.0] - Unreleased
+
+### Added
+- Implemented `CommandEvent` interception in `ModerationEventHandler.java` to prevent muted players from using chat-related commands (`/msg`, `/tell`, `/w`, `/r`, `/reply`, `/me`, `/g`, `/global`).
+- Added configurable `blockedMuteCommands` string list in `InStaffConfig.java` (`moderation` section) with defensive accessor guarded by `SPEC.isLoaded()`.
+
 ## [1.0.0] - Unreleased
 
 ### Initial Setup
