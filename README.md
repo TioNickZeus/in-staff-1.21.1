@@ -237,7 +237,6 @@ All persistent data is stored in JSON format inside the server root's `instaff/`
 
 ---
 
-<!--
 ## Data Collection & Privacy
 
 In-Staff is self-hosted, decentralized software: it does not send any data to the 
@@ -264,7 +263,6 @@ provider control how long it is retained (typically for as long as the server op
 and who can access it — in-game, this data is visible only to staff with OP level 2+ 
 via commands like `/history` and `/seen`. If you have questions about data retention 
 or deletion, contact the specific server's staff/owner, not the mod's developer.
--->
 
 ---
 
