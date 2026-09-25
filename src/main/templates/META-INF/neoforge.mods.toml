@@ -11,15 +11,15 @@ displayURL="https://github.com/TioNickZeus/in-staff-1.21.1"
 issueTrackerURL="https://github.com/TioNickZeus/in-staff-1.21.1/issues"
 description='''
 Complete administration, moderation, and server security suite for Minecraft 1.21.1 (NeoForge).
-Features: Client integrity verification, moderation (ban, mute, timeout, freeze), player history,
-invsee, item protection, chunk safe-unloading, and dynamic maintenance mode.
+Features: Client integrity verification, moderation (isban, istempban, isunban, mute, kick, freeze),
+player history, isinvsee, isendersee, item protection, chunk safe-unloading, and dynamic maintenance & smart whitelist mode.
 Requires installation on both client and server.
 '''
 
 [[dependencies.${mod_id}]]
     modId="neoforge"
     type="required"
-    versionRange="[${neo_version},)"
+    versionRange="${neo_version_range}"
     ordering="NONE"
     side="BOTH"
 
