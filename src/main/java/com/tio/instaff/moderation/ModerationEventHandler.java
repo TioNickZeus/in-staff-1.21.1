@@ -29,10 +29,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Event handler for server-authoritative moderation enforcement:
- * - Intercepts player login for maintenance, whitelist, and bans.
- * - Intercepts chat messages for active mutes.
+ * - Intercepts chat messages and commands for active mutes.
  * - Clamps movement and denies interactions for frozen players.
- * - Manages session timers for the playtime tracker.
  */
 @EventBusSubscriber(modid = InStaff.MODID)
 public final class ModerationEventHandler {
@@ -40,36 +38,6 @@ public final class ModerationEventHandler {
     private static final Map<UUID, Vec3> FREEZE_POSITIONS = new ConcurrentHashMap<>();
 
     private ModerationEventHandler() {
-    }
-
-    @SubscribeEvent(priority = net.neoforged.bus.api.EventPriority.HIGH)
-    public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
-        if (!(event.getEntity() instanceof ServerPlayer player)) {
-            return;
-        }
-
-        UUID uuid = player.getUUID();
-
-        // Check Active Ban (UUID first)
-        Optional<PunishmentRecord> activeBan = PunishmentManager.getInstance().getActiveBan(uuid);
-
-        // Offline Ban Evasion check: if not banned by UUID, check IP address
-        if (activeBan.isEmpty() && player.getIpAddress() != null) {
-            activeBan = PunishmentManager.getInstance().getActiveBanByIp(player.getIpAddress());
-        }
-
-        if (activeBan.isPresent()) {
-            PunishmentRecord ban = activeBan.get();
-            MutableComponent kickMessage;
-            if (ban.getExpiresAtEpoch() == -1L) {
-                kickMessage = LocalizationHelper.getMessage("instaff.punishment.banned",
-                        ban.getReason(), ban.getStaffName(), LocalizationHelper.getRawTranslation("instaff.common.permanent"));
-            } else {
-                kickMessage = LocalizationHelper.getMessage("instaff.punishment.tempbanned",
-                        ban.getReason(), ban.getStaffName(), DurationParser.formatDuration(ban.getRemainingMillis()));
-            }
-            player.connection.disconnect(kickMessage);
-        }
     }
 
     @SubscribeEvent

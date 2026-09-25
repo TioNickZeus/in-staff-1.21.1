@@ -7,6 +7,8 @@ All notable changes to the In-Staff mod will be documented in this file.
 ### Added
 - Implemented `CommandEvent` interception in `ModerationEventHandler.java` to prevent muted players from using chat-related commands (`/msg`, `/tell`, `/w`, `/r`, `/reply`, `/me`, `/g`, `/global`).
 - Added configurable `blockedMuteCommands` string list in `InStaffConfig.java` (`moderation` section) with defensive accessor guarded by `SPEC.isLoaded()`.
+- Implemented `PunishmentCheckConfigurationTask.java` and `ConfigurationTaskHandler.java` executing on NeoForge's `RegisterConfigurationTasksEvent` (network configuration phase) to disconnect banned players before world spawn and join broadcasts.
+- Removed redundant late ban check from `ModerationEventHandler.java`'s `PlayerLoggedInEvent`.
 
 ## [1.0.0] - Unreleased
 
