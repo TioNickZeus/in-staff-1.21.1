@@ -18,7 +18,7 @@ import java.util.function.Consumer;
  */
 public final class InStaffNetwork {
 
-    public static final String PROTOCOL_VERSION = "1.0.0";
+    public static final String PROTOCOL_VERSION = "1.1.0";
 
     @Nullable
     public static Consumer<IntegrityRequestPayload> clientRequestHandler = null;

@@ -2,7 +2,7 @@
 
 All notable changes to the In-Staff mod will be documented in this file.
 
-## [1.1.0] - Unreleased
+## [1.1.0] - 2026-09-25
 
 ### Added
 - Implemented `CommandEvent` interception in `ModerationEventHandler.java` to prevent muted players from using chat-related commands (`/msg`, `/tell`, `/w`, `/r`, `/reply`, `/me`, `/g`, `/global`).
@@ -22,7 +22,7 @@ All notable changes to the In-Staff mod will be documented in this file.
 - Renamed moderation ban commands from `/ban`, `/tempban`, `/unban` to `/isban`, `/istempban`, `/isunban` in `PunishCommands.java` to eliminate collisions with vanilla server commands while retaining standard syntax and permissions.
 - Synchronized all command help strings and documentation in `en_us.json`, `pt_br.json`, `README.md`, and `Lote6CommandsTest.java` to reference `/isinvsee`, `/isendersee`, `/isban`, `/istempban`, and `/isunban`.
 
-## [1.0.0] - Unreleased
+## [1.0.0] - 2026-09-24
 
 ### Initial Setup
 - Initial project scaffolding for Minecraft 1.21.1 on NeoForge 21.1.250.
