@@ -186,7 +186,7 @@ public final class PunishmentManager {
      * Checks if an IP address belongs to an active banned player (offline ban evasion check).
      */
     public Optional<PunishmentRecord> getActiveBanByIp(@Nullable String ipAddress) {
-        if (ipAddress == null || ipAddress.isBlank() || !InStaffConfig.isPreventOfflineBanEvasion()) {
+        if (ipAddress == null || ipAddress.isBlank() || !InStaffConfig.isIpBanEvasionEnabled()) {
             return Optional.empty();
         }
 
@@ -202,7 +202,7 @@ public final class PunishmentManager {
      * Checks if a client token belongs to an active banned player (offline ban evasion check).
      */
     public Optional<PunishmentRecord> getActiveBanByClientToken(@Nullable String token) {
-        if (token == null || token.isBlank() || !InStaffConfig.isPreventOfflineBanEvasion()) {
+        if (token == null || token.isBlank() || !InStaffConfig.isTokenBanEvasionEnabled()) {
             return Optional.empty();
         }
 

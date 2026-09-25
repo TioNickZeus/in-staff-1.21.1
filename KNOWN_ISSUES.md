@@ -17,7 +17,7 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ### 1. Anti-Cheat & Client Integrity Bypasses
 * `[Pending Testing]` — **Mod Spoofing:** A sophisticated user could compile a cheat client into a custom `.jar` and change the internal mod ID to match something benign (e.g., `jei`) to bypass both the blacklist and the hash check.
-* `[Pending Testing]` — **Token Scrubbing:** If a banned player uses a VPN (to change their IP) and manually deletes the `.instaff_token` file (or reinstalls their modpack), they will bypass the offline evasion check as a new token will be generated.
+* `[Resolved]` — **Token Scrubbing:** Resolved via deterministic client-side machine ID fallback using SHA-256 (`MachineIdFetcher`). If `.instaff_token` is deleted, the token is deterministically regenerated from OS hardware identifiers (`MachineGuid` on Windows, `/etc/machine-id` on Linux, `IOPlatformUUID` on macOS). Configurable offline evasion modes provided via `banEvasionMode` (`STRICT`, `IP_ONLY`, `TOKEN_ONLY`, `OFF`).
 * `[Confirmed]` — **Payload Versioning:** There is no payload version negotiation during the integrity handshake. Mismatched client/server versions will fail unpredictably (decoder exceptions) rather than providing a clean disconnect message to the player.
 
 ### 2. Inventory Inspection (`/invsee`) Concurrency

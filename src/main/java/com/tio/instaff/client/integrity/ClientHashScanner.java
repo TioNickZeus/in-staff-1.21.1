@@ -62,15 +62,30 @@ public final class ClientHashScanner {
                 }
             }
 
-            String newToken = UUID.randomUUID().toString();
-            Files.writeString(tokenPath, newToken);
-            cachedToken = newToken;
+            Optional<String> rawId = MachineIdFetcher.fetchRawMachineIdentifier();
+            if (rawId.isPresent()) {
+                String deterministicToken = MachineIdFetcher.toSha256Token(rawId.get());
+                Files.writeString(tokenPath, deterministicToken);
+                cachedToken = deterministicToken;
+                return cachedToken;
+            }
+
+            // Transient failure or unsupported OS: fallback to in-memory token without persisting to disk
+            InStaff.LOGGER.warn("[In-Staff] Could not obtain deterministic machine identifier. Using transient token for this session without persisting to disk.");
+            cachedToken = UUID.randomUUID().toString();
             return cachedToken;
         } catch (Exception e) {
             InStaff.LOGGER.error("Failed to read/write In-Staff client installation token, using transient token", e);
             cachedToken = UUID.randomUUID().toString();
             return cachedToken;
         }
+    }
+
+    /**
+     * Resets the in-memory cached token. Visible for testing.
+     */
+    static synchronized void resetCachedTokenForTesting() {
+        cachedToken = null;
     }
 
     /**

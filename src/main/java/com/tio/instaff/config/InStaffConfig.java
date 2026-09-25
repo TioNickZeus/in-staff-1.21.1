@@ -16,7 +16,7 @@ public final class InStaffConfig {
 
     // Moderation
     public static final ModConfigSpec.BooleanValue BROADCAST_PUNISHMENTS;
-    public static final ModConfigSpec.BooleanValue PREVENT_OFFLINE_BAN_EVASION;
+    public static final ModConfigSpec.EnumValue<BanEvasionMode> BAN_EVASION_MODE;
     public static final ModConfigSpec.ConfigValue<String> DEFAULT_MUTE_DURATION;
     public static final ModConfigSpec.IntValue MAX_TEMP_BAN_DAYS;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> BLOCKED_MUTE_COMMANDS;
@@ -43,9 +43,13 @@ public final class InStaffConfig {
                 .comment("Whether punishments (bans, mutes, kicks) should be broadcasted to all online players.")
                 .define("broadcastPunishments", true);
 
-        PREVENT_OFFLINE_BAN_EVASION = BUILDER
-                .comment("Enables IP and client-token association to deter offline mode players from changing nicks to bypass bans.")
-                .define("preventOfflineBanEvasion", true);
+        BAN_EVASION_MODE = BUILDER
+                .comment("Offline ban evasion prevention mode:",
+                        "STRICT     - Enforces both IP and Client Token checks against active bans (recommended for offline servers).",
+                        "IP_ONLY    - Enforces only IP address check (useful if multiple players share the same physical PC).",
+                        "TOKEN_ONLY - Enforces only Client Token check (useful if multiple players share an IP via CGNAT or dorms).",
+                        "OFF        - Disables all secondary offline evasion checks (only Minecraft UUID is checked).")
+                .defineEnum("banEvasionMode", BanEvasionMode.STRICT);
 
         DEFAULT_MUTE_DURATION = BUILDER
                 .comment("Default duration when mute duration is omitted (e.g., '1h', '30m').")
@@ -117,8 +121,18 @@ public final class InStaffConfig {
         return SPEC.isLoaded() ? BROADCAST_PUNISHMENTS.get() : true;
     }
 
-    public static boolean isPreventOfflineBanEvasion() {
-        return SPEC.isLoaded() ? PREVENT_OFFLINE_BAN_EVASION.get() : true;
+    public static BanEvasionMode getBanEvasionMode() {
+        return SPEC.isLoaded() ? BAN_EVASION_MODE.get() : BanEvasionMode.STRICT;
+    }
+
+    public static boolean isIpBanEvasionEnabled() {
+        BanEvasionMode mode = getBanEvasionMode();
+        return mode == BanEvasionMode.STRICT || mode == BanEvasionMode.IP_ONLY;
+    }
+
+    public static boolean isTokenBanEvasionEnabled() {
+        BanEvasionMode mode = getBanEvasionMode();
+        return mode == BanEvasionMode.STRICT || mode == BanEvasionMode.TOKEN_ONLY;
     }
 
     public static String getDefaultMuteDuration() {
