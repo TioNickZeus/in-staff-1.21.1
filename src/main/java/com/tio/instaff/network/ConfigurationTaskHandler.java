@@ -15,6 +15,7 @@ public final class ConfigurationTaskHandler {
     public static void onRegisterConfigurationTasks(RegisterConfigurationTasksEvent event) {
         if (event.getListener() instanceof ServerConfigurationPacketListenerImpl listenerImpl) {
             event.register(new PunishmentCheckConfigurationTask(listenerImpl));
+            event.register(new AccessCheckConfigurationTask(listenerImpl));
         }
     }
 }

@@ -28,25 +28,9 @@ public final class AccessEventHandler {
             return;
         }
 
-        UUID uuid = player.getUUID();
-        boolean isStaff = player.hasPermissions(2);
-
-        // 1. Check Maintenance Mode
-        if (!MaintenanceManager.getInstance().isAllowed(uuid, isStaff)) {
-            player.connection.disconnect(LocalizationHelper.getMessage("instaff.maintenance.kick_message"));
-            return;
-        }
-
-        // 2. Check Smart Whitelist
-        if (WhitelistManager.getInstance().isEnabled() && !isStaff) {
-            if (!WhitelistManager.getInstance().isWhitelisted(uuid)) {
-                player.connection.disconnect(LocalizationHelper.getMessage("instaff.whitelist.kick_message"));
-                return;
-            }
-        }
-
-        // 3. Start Playtime Tracking
-        PlaytimeTracker.getInstance().onPlayerJoin(uuid, player.getGameProfile().getName());
+        // Maintenance and Whitelist access control is enforced early during the configuration phase
+        // via AccessCheckConfigurationTask. Here we only initialize Playtime tracking upon entering the world.
+        PlaytimeTracker.getInstance().onPlayerJoin(player.getUUID(), player.getGameProfile().getName());
     }
 
     @SubscribeEvent

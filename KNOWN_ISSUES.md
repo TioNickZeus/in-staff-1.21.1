@@ -46,6 +46,10 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ### 8. Command Conflicts & Collision
 * `[Confirmed]` — **Vanilla Command Collision (`/ban`):** In-Staff's `/ban` command collides directly with vanilla Minecraft's built-in `/ban` command (`BanPlayerCommands`). The vanilla dispatcher node takes precedence, preventing In-Staff's `/ban` handler from executing, while `/tempban` functions correctly due to lack of a vanilla counterpart. Requires command collision mitigation (e.g., prefixing `/isban` or overriding vanilla command tree).
+* `[Confirmed]` — **Command Help & Documentation Mismatch:** The `/staff` / `/instaff` help message (`instaff.command.staff.help` in lang files) and `README.md` still advertise `/invsee` and `/endersee` instead of `/isinvsee` and `/isendersee`.
+
+### 9. Access Control & Login Timing
+* `[Confirmed]` — **Late Kick on Maintenance and Smart Whitelist:** Unlike bans (which were moved to `PunishmentCheckConfigurationTask` during the configuration handshake), `MaintenanceManager` and `WhitelistManager` checks are still evaluated in `AccessEventHandler`'s `PlayerLoggedInEvent`. As a result, non-whitelisted players or non-staff players during maintenance briefly appear in the world and trigger join broadcasts before being disconnected. Needs migration to configuration phase tasks.
 
 ---
 

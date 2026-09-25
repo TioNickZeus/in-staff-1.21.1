@@ -49,10 +49,10 @@ public final class PunishCommands {
     }
 
     // -------------------------------------------------------------
-    // /ban <player> [reason]
+    // /isban <player> [reason]
     // -------------------------------------------------------------
     private static void registerBan(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("ban")
+        dispatcher.register(Commands.literal("isban")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))
@@ -89,10 +89,10 @@ public final class PunishCommands {
     }
 
     // -------------------------------------------------------------
-    // /tempban <player> <duration> [reason]
+    // /istempban <player> <duration> [reason]
     // -------------------------------------------------------------
     private static void registerTempBan(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("tempban")
+        dispatcher.register(Commands.literal("istempban")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))
@@ -147,10 +147,10 @@ public final class PunishCommands {
     }
 
     // -------------------------------------------------------------
-    // /unban <player>
+    // /isunban <player>
     // -------------------------------------------------------------
     private static void registerUnban(CommandDispatcher<CommandSourceStack> dispatcher) {
-        dispatcher.register(Commands.literal("unban")
+        dispatcher.register(Commands.literal("isunban")
                 .requires(source -> source.hasPermission(2))
                 .then(Commands.argument("player", StringArgumentType.word())
                         .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))

@@ -31,9 +31,9 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 | Command | Arguments | Permission | Description |
 | :--- | :--- | :--- | :--- |
 | `/staff` (or `/instaff`) | None | OP Level 2 | Displays an overview and help guide for all staff commands. |
-| `/ban` | `<player> [reason]` | OP Level 2 | Permanently bans a player (online or offline), kicks target, and logs to audit history. |
-| `/tempban` | `<player> <duration> [reason]` | OP Level 2 | Temporarily bans a player for a specific duration. |
-| `/unban` | `<player>` | OP Level 2 | Revokes an active ban and updates audit records. |
+| `/isban` | `<player> [reason]` | OP Level 2 | Permanently bans a player (online or offline), kicks target, and logs to audit history. |
+| `/istempban` | `<player> <duration> [reason]` | OP Level 2 | Temporarily bans a player for a specific duration. |
+| `/isunban` | `<player>` | OP Level 2 | Revokes an active ban and updates audit records. |
 | `/mute` | `<player> [reason]` | OP Level 2 | Permanently mutes a player's server chat messages. |
 | `/tempmute` | `<player> <duration> [reason]` | OP Level 2 | Temporarily mutes a player's server chat messages. |
 | `/unmute` | `<player>` | OP Level 2 | Revokes an active mute on a player. |
@@ -43,8 +43,8 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 | `/maintenance bypass` | `add <player>` \| `remove <player>` | OP Level 2 | Manages player exemptions from maintenance kick checks. |
 | `/swhitelist` | `on` \| `off` \| `list` \| `reload` | OP Level 2 | Manages the standalone Smart Whitelist. |
 | `/swhitelist` | `add <player>` \| `remove <player>` | OP Level 2 | Adds or removes players from the Smart Whitelist. |
-| `/invsee` | `<player>` | OP Level 2 | Opens full 41-slot inventory (armor, offhand, main, hotbar) for online/offline players. |
-| `/endersee` | `<player>` | OP Level 2 | Opens 27-slot Ender Chest container for online or offline players. |
+| `/isinvsee` | `<player>` | OP Level 2 | Opens full 41-slot inventory (armor, offhand, main, hotbar) for online/offline players. |
+| `/isendersee` | `<player>` | OP Level 2 | Opens 27-slot Ender Chest container for online or offline players. |
 | `/banitem add` | `<item> [mode]` | OP Level 2 | Restricts an item with a specific restriction mode (`TOTAL`, `NO_USE`, `NO_PLACE`). |
 | `/banitem remove` | `<item>` | OP Level 2 | Removes restrictions from an item. |
 | `/banitem list` | None | OP Level 2 | Lists all currently restricted items and their respective modes. |
@@ -60,11 +60,11 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 
 ### Moderation & Sanctions
 
-#### 1. Ban & Temporary Ban
+#### 1. Ban & Temporary Ban (`/isban`, `/istempban`)
 ```text
-/ban <player> [reason...]
-/tempban <player> <duration> [reason...]
-/unban <player>
+/isban <player> [reason...]
+/istempban <player> <duration> [reason...]
+/isunban <player>
 ```
 - **Duration syntax**: Supports composite strings such as `30m`, `2h`, `1d12h`, `7d`, `1w`, `1mo`, `1y`.
 - **Offline support**: Works seamlessly on offline players by resolving local deterministic UUIDs.
@@ -119,9 +119,9 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 
 ### Inspection Engine
 
-#### 1. Inventory Inspection (`/invsee`)
+#### 1. Inventory Inspection (`/isinvsee`)
 ```text
-/invsee <player>
+/isinvsee <player>
 ```
 - Opens an administrative container displaying:
   - **Armor Slots**: Head, Chestplate, Leggings, Boots.
@@ -131,9 +131,9 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 - **Online Players**: Bidirectional real-time synchronization directly with the player's active inventory.
 - **Offline Players**: Reads and writes `world/playerdata/<UUID>.dat` NBT atomically with `.tmp` swaps upon container closure. Self-inspection is blocked.
 
-#### 2. Ender Chest Inspection (`/endersee`)
+#### 2. Ender Chest Inspection (`/isendersee`)
 ```text
-/endersee <player>
+/isendersee <player>
 ```
 - Opens a 27-slot Ender Chest interface with live bidirectional synchronization (for online players) or atomic NBT persistence (for offline players).
 
@@ -234,6 +234,37 @@ All persistent data is stored in JSON format inside the server root's `instaff/`
 - `instaff/banned_items.json` - Restricted item IDs and their active restriction modes.
 - `instaff/playtime.json` - Lifetime playtime and connection telemetry for all players.
 - `instaff/quarantine.log` - Audit log recording isolated corrupt entities and block entities.
+
+---
+
+<!--
+## Data Collection & Privacy
+
+In-Staff is self-hosted, decentralized software: it does not send any data to the 
+mod's developer, to any third party, or to any external service. All data described 
+below is collected, stored, and controlled entirely by the individual server owner 
+and their hosting provider — not by the mod's author.
+
+In-Staff collects the following data from connecting clients to support moderation 
+and anti-ban-evasion features:
+
+- **Mod/resource pack integrity**: SHA-256 hashes of files in your `mods/` and 
+  `resourcepacks/` folders (not the files themselves), compared against server-defined 
+  whitelists/blacklists.
+- **Installation token**: a persistent identifier used to deter offline ban evasion. 
+  Derived from an OS installation identifier (or a random UUID fallback) and hashed 
+  with SHA-256 on the client before transmission. The server never receives or 
+  stores raw identifiers — only the one-way cryptographic hash.
+- **IP address**: standard for any Minecraft server connection, additionally logged 
+  alongside punishment records to deter ban evasion.
+
+**Who controls this data**: Once collected, this data is stored in plain JSON files 
+(`instaff/` folder) on the server you connect to. The server owner and their hosting 
+provider control how long it is retained (typically for as long as the server operates) 
+and who can access it — in-game, this data is visible only to staff with OP level 2+ 
+via commands like `/history` and `/seen`. If you have questions about data retention 
+or deletion, contact the specific server's staff/owner, not the mod's developer.
+-->
 
 ---
 
