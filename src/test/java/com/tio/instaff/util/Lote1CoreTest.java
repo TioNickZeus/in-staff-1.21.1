@@ -23,7 +23,9 @@ class Lote1CoreTest {
             assertFalse(InStaffConfig.SPEC.isLoaded(), "Spec should not be loaded in unit test context");
 
             assertTrue(InStaffConfig.isBroadcastPunishments());
-            assertTrue(InStaffConfig.isPreventOfflineBanEvasion());
+            assertEquals(com.tio.instaff.config.BanEvasionMode.STRICT, InStaffConfig.getBanEvasionMode());
+            assertTrue(InStaffConfig.isIpBanEvasionEnabled());
+            assertTrue(InStaffConfig.isTokenBanEvasionEnabled());
             assertEquals("1h", InStaffConfig.getDefaultMuteDuration());
             assertEquals(365, InStaffConfig.getMaxTempBanDays());
             assertFalse(InStaffConfig.isMaintenanceEnabled());

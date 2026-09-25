@@ -77,7 +77,7 @@ public final class ServerIntegrityValidator {
                 player.getGameProfile().getName(), uuid, token);
 
         // 1. Offline Ban Evasion check: token match against active bans
-        if (token != null && !token.isBlank() && InStaffConfig.isPreventOfflineBanEvasion()) {
+        if (token != null && !token.isBlank() && InStaffConfig.isTokenBanEvasionEnabled()) {
             Optional<PunishmentRecord> activeBan = PunishmentManager.getInstance().getActiveBanByClientToken(token);
             if (activeBan.isPresent()) {
                 PunishmentRecord ban = activeBan.get();
