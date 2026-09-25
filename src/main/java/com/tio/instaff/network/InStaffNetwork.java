@@ -4,6 +4,7 @@ import com.tio.instaff.InStaff;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.network.event.RegisterConfigurationTasksEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import org.jetbrains.annotations.Nullable;
@@ -27,6 +28,7 @@ public final class InStaffNetwork {
 
     public static void register(IEventBus modBus) {
         modBus.addListener(RegisterPayloadHandlersEvent.class, InStaffNetwork::onRegisterPayloads);
+        modBus.addListener(RegisterConfigurationTasksEvent.class, ConfigurationTaskHandler::onRegisterConfigurationTasks);
     }
 
     private static void onRegisterPayloads(RegisterPayloadHandlersEvent event) {
