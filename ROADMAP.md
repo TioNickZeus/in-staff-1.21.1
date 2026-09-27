@@ -41,17 +41,33 @@ This document tracks planned features, current sprint goals, and technical miles
 
 - [x] **Logging Standardization**: Replace generic `System.err.println` and `printStackTrace()` in defensive tick-loop try/catch blocks (`ProtectionEventHandler`, `ModerationEventHandler`, `IntegrityEventHandler`) with the centralized `InStaff.LOGGER.error`.
 - [x] **Command Delegation Strictness**: Refactor punishment commands (e.g., `/kick`, `/ban`) to fully delegate player disconnection logic to `PunishmentManager` instead of issuing the `connection.disconnect()` call directly from the command execution layer.
-- [ ] **Curios Accessory Integration**: Implement soft-dependency support for inspecting and modifying Curios slots via `/invsee`.
 - [x] **Mute Command Bypass**: Intercept `CommandEvent` in `ModerationEventHandler` to prevent muted players from using chat-related commands. Instead of hardcoding, expose a `blocked_mute_commands` string list in the config file, defaulting to standard chat/PM commands (`/msg`, `/tell`, `/g`, `/global`, `/w`, `/reply`, etc.).
-- [ ] **Invsee GUI Alignment**: Fine-tune the pixel coordinates (X, Y) of the slots in `InvseeMenu` and the background texture dimensions in `InvseeScreen` so they align perfectly in-game.
 - [x] **IMPORTANT: Command Collision Mitigation**: Renamed `/invsee`, `/endersee`, `/ban`, `/tempban`, and `/unban` to `/isinvsee`, `/isendersee`, `/isban`, `/istempban`, and `/isunban` to prevent conflicts with vanilla server commands and server utility mods (Essentials).
 - [x] **Pre-Join Disconnection**: Refactor punishment login checks to happen during the network configuration phase via `PunishmentCheckConfigurationTask`. This prevents banned players from briefly appearing in the world or triggering "Player joined the game" messages before being kicked.
 - [x] **Pre-Join Maintenance & Whitelist Disconnection**: Migrated `MaintenanceManager` and `WhitelistManager` checks from `PlayerLoggedInEvent` into a configuration-phase task (`AccessCheckConfigurationTask`), ensuring unauthorized players are kicked before spawning in the world and before join broadcasts.
 - [x] **Command Help & Documentation Alignment**: Synchronized `/staff` and `/instaff` help output (`pt_br.json`, `en_us.json`) and `README.md` to reference the renamed `/isinvsee`, `/isendersee`, `/isban`, `/istempban`, and `/isunban` commands.
-- [ ] **Staff Mod Inspection (`/modinspec`)**: Cache the `IntegrityResponsePayload` mod lists in `ServerIntegrityValidator` upon successful login. Implement a `/modinspec <player>` command to allow staff to view a live player's loaded mods on demand without needing to disconnect them, aiding in "gray-area" investigations.
 - [x] **Deterministic Client Token (Machine ID Fallback)**: Enhance the installation token so a stable identifier survives a naive modpack reinstall, instead of resetting whenever `.instaff_token` is deleted.
   - Keep today's behavior as the primary path: random value generated once and persisted to `.instaff_token`.
   - Add a fallback for when no token file exists: derive the value from an OS-level machine identifier instead of generating a fresh random one — `/etc/machine-id` on Linux (plain file read, no dependency needed), `MachineGuid` from the Windows registry, `IOPlatformUUID` on macOS (both via `ProcessBuilder`) — then persist the result to `.instaff_token` for future reads.
   - **Explicitly rejected**: reading physical disk serial numbers (via `oshi`/JNA). Same trust ceiling as the OS machine ID (client still self-reports the value), but adds a heavier cross-platform dependency, worse reliability on NVMe/RAID/VM setups, and raises privacy concerns as a hardware-level identifier. Not worth the added complexity for the same security ceiling.
   - **Known limitation (by design, not a blocker)**: raises the bar against a noob who reinstalls the modpack, but does not stop a determined evader — a modified client can still report an arbitrary value, same trust model as the current token and the client integrity hash check ("deterrent, not cryptographic proof").
   - **Risk to watch**: cloned VM images (common on some VPS/cloud-gaming providers) can share the same Linux `machine-id` if it wasn't regenerated on clone (`systemd-machine-id-setup`), which could cause false-positive collisions between two legitimate players on different cloud instances. No fix beyond documenting it for now; revisit if it generates real complaints.
+
+## Version 1.1.1 — Account Security & QoL Improvements
+
+- [ ] **Account Device Lock / Anti-Impersonation Binding**:
+  - **Problem**: In offline-mode servers (`online-mode=false`), any player can type another user's nickname in their launcher and log into their account. While `clientToken` catches banned players attempting ban evasion, it currently does *not* prevent an unauthorized computer from logging into an unbanned player's account.
+  - **Solution**: Bind each account (UUID) to its authorized machine token(s) on initial connection (Trust-On-First-Use: TOFU), stored in `instaff/device_locks.json`.
+  - **Enforcement**: If a player attempts to join with a known nickname/UUID from an unrecognized `clientToken`, reject the connection with an actionable error message (`"This account is locked to a different computer. Contact staff to unlock or authorize a new device."`).
+  - **Multi-Device Support**: Allow multiple trusted tokens per player (e.g. desktop + laptop).
+  - **Staff Management**:
+    - `/isdevice unlock <player>`: Clears binding so the legitimate owner can log in and pair a new machine.
+    - `/isdevice trust <player>`: Authorizes the current/specified device token for an account.
+    - `/isdevice info <player>`: Displays bound token hashes and authorization history.
+  - **Configuration (`deviceLockMode`)**:
+    - `STAFF_ONLY` (default): Enforces device lock strictly for staff/OPs to prevent admin account hijacking, while leaving normal players unrestricted.
+    - `ALL_PLAYERS`: Enforces device lock for all server players.
+    - `OFF`: Disables device locking entirely.
+- [ ] **Staff Mod Inspection (`/modinspec`)**: Cache the `IntegrityResponsePayload` mod lists in `ServerIntegrityValidator` upon successful login. Implement a `/modinspec <player>` command to allow staff to view a live player's loaded mods on demand without needing to disconnect them, aiding in "gray-area" investigations.
+- [ ] **Invsee GUI Alignment**: Fine-tune the pixel coordinates (X, Y) of the slots in `InvseeMenu` and the background texture dimensions in `InvseeScreen` so they align perfectly in-game.
+- [ ] **Curios Accessory Integration**: Implement soft-dependency support for inspecting and modifying Curios slots via `/isinvsee`.
