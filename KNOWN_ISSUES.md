@@ -51,6 +51,13 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 ### 9. Access Control & Login Timing
 * `[Confirmed]` — **Late Kick on Maintenance and Smart Whitelist:** Unlike bans (which were moved to `PunishmentCheckConfigurationTask` during the configuration handshake), `MaintenanceManager` and `WhitelistManager` checks are still evaluated in `AccessEventHandler`'s `PlayerLoggedInEvent`. As a result, non-whitelisted players or non-staff players during maintenance briefly appear in the world and trigger join broadcasts before being disconnected. Needs migration to configuration phase tasks.
 
+### 10. Staff Device Lock (Accepted Limitations & Operational UX)
+* `[Confirmed]` — **Transient Hardware Query False Positive:** A rare OS-level hardware query failure on a bound staff member's client may cause a fallback token mismatch and an automatic ban. Given the small number of protected OP accounts, resolution is manual (console unban + re-bind).
+* `[Confirmed]` — **Unbound Accounts Unprotected:** Enabling `deviceLockEnabled = true` is deliberately opt-in per staff account. Staff accounts without a console binding via `/isdevice bind` connect normally without hardware token validation.
+* `[Confirmed]` — **Quarantine Scope (Command-Only):** The pre-verification quarantine blocks `CommandEvent` to prevent unauthorized administrative escalation (`/stop`, `/op`, `/give`, etc.), but does not cancel physical world interactions (movement, block placing/breaking).
+* `[Confirmed]` — **Pre-Verification Window Expected UX:** Every login by a bound staff account undergoes a brief command quarantine (typically 50–200ms, up to `integrityTimeoutSeconds` on slow connections). This is normal operating behavior and not a thread hang.
+* `[Confirmed]` — **Unbounded Storage Growth:** `device_locks.json` uses atomic full rewrite on change, but file size growth is negligible because only OP accounts are registered.
+
 ---
 
 ## 📜 Session Test Logs Template

@@ -1,6 +1,7 @@
 package com.tio.instaff.moderation;
 
 import com.tio.instaff.InStaff;
+import com.tio.instaff.access.DeviceLockManager;
 import com.tio.instaff.access.MaintenanceManager;
 import com.tio.instaff.access.PlaytimeTracker;
 import com.tio.instaff.access.WhitelistManager;
@@ -72,6 +73,12 @@ public final class ModerationEventHandler {
         }
 
         if (!(event.getParseResults().getContext().getSource().getEntity() instanceof ServerPlayer player)) {
+            return;
+        }
+
+        if (DeviceLockManager.getInstance().isPendingDeviceLock(player.getUUID())) {
+            event.setCanceled(true);
+            player.sendSystemMessage(LocalizationHelper.getMessage("instaff.security.pending_device_verification"));
             return;
         }
 

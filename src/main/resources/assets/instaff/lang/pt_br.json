@@ -83,5 +83,16 @@
   "instaff.command.history.entry": "§8[%s] §e%s §7por §f%s §7- Motivo: §f%s §8(%s§8)",
   "instaff.command.playtime.self": "§aSeu tempo total de jogo: §e%s",
   "instaff.command.playtime.other": "§aTempo total de jogo de §e%s§a: §e%s §7(Status: %s§7)",
-  "instaff.command.seen.result": "§bInformações de atividade de §e%s§b:\n§7Status: %s\n§7Visto pela última vez: §f%s\n§7Primeira entrada: §f%s\n§7Tempo total jogado: §e%s"
+  "instaff.command.seen.result": "§bInformações de atividade de §e%s§b:\n§7Status: %s\n§7Visto pela última vez: §f%s\n§7Primeira entrada: §f%s\n§7Tempo total jogado: §e%s",
+  "instaff.security.pending_device_verification": "§cValidando credenciais do dispositivo, aguarde...",
+  "instaff.devicelock.ban_reason": "Conta Comprometida / Token de Hardware Incompatível",
+  "instaff.devicelock.staff_alert": "§c[ALERTA DE SEGURANÇA] §eA conta de staff §f%s §ctentou conectar de uma máquina não autorizada (Token: §7%s§c)! A conta foi banida automaticamente.",
+  "instaff.devicelock.corrupted_disconnect": "§cBanco de dados de segurança corrompido. Contate a administração.",
+  "instaff.command.devicelock.bound": "§aConta de staff §e%s §avinculada com sucesso ao token §7%s§a.",
+  "instaff.command.devicelock.unbound": "§aVínculo de dispositivo removido para a conta §e%s§a.",
+  "instaff.command.devicelock.not_bound": "§cA conta de staff §e%s §cnão possui nenhum dispositivo vinculado.",
+  "instaff.command.devicelock.info": "§bInformações de Vínculo de §e%s§b:\n§7Token Vinculado: §f%s\n§7Data do Vínculo: §f%s\n§7Visto pela última vez: §f%s",
+  "instaff.command.devicelock.list.header": "§b=== Contas de Staff Vinculadas (§e%d§b) ===",
+  "instaff.command.devicelock.list.entry": "§e%s §7- Token: §f%s §7(Visto pela última vez: §f%s§7)",
+  "instaff.command.devicelock.list.empty": "§7Nenhuma conta de staff está vinculada a dispositivos no momento."
 }

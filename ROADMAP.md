@@ -55,19 +55,12 @@ This document tracks planned features, current sprint goals, and technical miles
 
 ## Version 1.1.1 — Account Security & QoL Improvements
 
-- [ ] **Account Device Lock / Anti-Impersonation Binding**:
-  - **Problem**: In offline-mode servers (`online-mode=false`), any player can type another user's nickname in their launcher and log into their account. While `clientToken` catches banned players attempting ban evasion, it currently does *not* prevent an unauthorized computer from logging into an unbanned player's account.
-  - **Solution**: Bind each account (UUID) to its authorized machine token(s) on initial connection (Trust-On-First-Use: TOFU), stored in `instaff/device_locks.json`.
-  - **Enforcement**: If a player attempts to join with a known nickname/UUID from an unrecognized `clientToken`, reject the connection with an actionable error message (`"This account is locked to a different computer. Contact staff to unlock or authorize a new device."`).
-  - **Multi-Device Support**: Allow multiple trusted tokens per player (e.g. desktop + laptop).
-  - **Staff Management**:
-    - `/isdevice unlock <player>`: Clears binding so the legitimate owner can log in and pair a new machine.
-    - `/isdevice trust <player>`: Authorizes the current/specified device token for an account.
-    - `/isdevice info <player>`: Displays bound token hashes and authorization history.
-  - **Configuration (`deviceLockMode`)**:
-    - `STAFF_ONLY` (default): Enforces device lock strictly for staff/OPs to prevent admin account hijacking, while leaving normal players unrestricted.
-    - `ALL_PLAYERS`: Enforces device lock for all server players.
-    - `OFF`: Disables device locking entirely.
+- [x] **Account Device Lock / Anti-Impersonation Binding**:
+  - **Problem**: In offline-mode servers (`online-mode=false`), any player can type another user's nickname in their launcher and log into their account. While `clientToken` catches banned players attempting ban evasion, it did not stop unbanned staff nicknames from being hijacked by an unauthorized machine.
+  - **Solution**: Console-gated hardware token binding for staff accounts (`OP level >= 2`), stored atomically in `instaff/device_locks.json`.
+  - **Enforcement & Quarantine**: On join, bound staff accounts undergo a brief command quarantine (`pendingDeviceLocks`) until the Play-phase integrity handshake completes. On token mismatch, the account is auto-banned via `PunishmentManager`, kicked, and an alert is broadcast to online staff.
+  - **Console-Only Security**: Binding and unbinding are strictly console-only (`/isdevice bind <player> <token>`, `/isdevice unbind <player>`), eliminating the in-game TOFU hijack window. Staff inspection available via `/isdevice info` and `/isdevice list`.
+  - **Configuration**: Disabled by default via `deviceLockEnabled = false` under `[security]`. Safe fail-closed behavior on corrupted JSON.
 - [ ] **Staff Mod Inspection (`/modinspec`)**: Cache the `IntegrityResponsePayload` mod lists in `ServerIntegrityValidator` upon successful login. Implement a `/modinspec <player>` command to allow staff to view a live player's loaded mods on demand without needing to disconnect them, aiding in "gray-area" investigations.
 - [ ] **Invsee GUI Alignment**: Fine-tune the pixel coordinates (X, Y) of the slots in `InvseeMenu` and the background texture dimensions in `InvseeScreen` so they align perfectly in-game.
 - [ ] **Curios Accessory Integration**: Implement soft-dependency support for inspecting and modifying Curios slots via `/isinvsee`.

@@ -66,7 +66,8 @@ com.tio.instaff/
 │   ├── InvseeCommand.java           ← /invsee, /endersee [player]
 │   ├── BanItemCommand.java          ← /banitem [add|remove|list|check]
 │   ├── HistoryCommand.java          ← /history, /checkpunish [player]
-│   └── PlaytimeCommand.java         ← /playtime, /seen [player]
+│   ├── PlaytimeCommand.java         ← /playtime, /seen [player]
+│   └── DeviceLockCommand.java       ← /isdevice [bind|unbind|info|list] (console-gated hardware binding)
 ├── config/
 │   └── InStaffConfig.java           ← TOML server configuration specifications (ModConfig.Type.SERVER)
 ├── moderation/                      ← Punishment subsystem (server-side)
@@ -76,7 +77,10 @@ com.tio.instaff/
 ├── access/                          ← Session & access controls (server-side)
 │   ├── MaintenanceManager.java      ← Maintenance state, ping MOTD listener, kick handler
 │   ├── WhitelistManager.java        ← Dynamic whitelist store and login validator
-│   └── PlaytimeTracker.java         ← Session timer, total playtime persistence, /seen lookup
+│   ├── PlaytimeTracker.java         ← Session timer, total playtime persistence, /seen lookup
+│   ├── DeviceLockManager.java       ← Hardware token lock coordinator, fail-closed state, command quarantine
+│   ├── DeviceLockRecord.java        ← POJO record: accountUUID, boundToken, boundEpoch, lastSeenEpoch
+│   └── DeviceValidationResult.java  ← Enum: NOT_APPLICABLE, CORRUPTED, NO_BINDING, MATCH, MISMATCH
 ├── inspection/                      ← Inventory & container inspection (shared menus)
 │   ├── InvseeMenu.java              ← Custom AbstractContainerMenu synced with target player
 │   ├── EnderseeMenu.java            ← Custom menu synced with target EnderChest
@@ -222,6 +226,27 @@ The client integrity system verifies that connecting clients are running an appr
 - **Installation Token:** The `IntegrityResponsePayload` passes a client token which is saved in `PunishmentRecord`s. This deters offline ban evasion by matching tokens on future connections.
 - The hash scan runs on the **client JVM** and the server trusts the response. A determined cheater could patch the mod to lie. This is a **deterrent**, not a cryptographic proof. It raises the bar significantly beyond "just install X-Ray".
 - For higher security, combine with server-side detection (ore mining pattern analysis, movement anomaly detection).
+
+### 3.6 Staff Device Lock Subsystem (`access/`)
+
+The Staff Device Lock binds high-value accounts (OP level >= 2) to a specific, console-authorized client hardware installation token.
+
+#### Core Flow and Command Quarantine
+
+1. **Pre-Verification Quarantine (`pendingDeviceLocks`)**:
+   - On `PlayerLoggedInEvent`, if `deviceLockEnabled` is true, the player has OP level >= 2, and an active binding exists, the player's UUID is placed into `pendingDeviceLocks`.
+   - While quarantined, all commands from the player are cancelled in `ModerationEventHandler.onCommandEvent` with `instaff.security.pending_device_verification`.
+   - Non-staff, unbound accounts, and logins when `deviceLockEnabled = false` are never quarantined.
+2. **Handshake Verification**:
+   - Evaluated in `ServerIntegrityValidator.handleResponse()` immediately after the ban evasion check.
+   - Clears `pendingDeviceLocks` inline on **all 5 terminal outcomes** (`NOT_APPLICABLE`, `CORRUPTED`, `NO_BINDING`, `MATCH`, `MISMATCH`).
+   - `MATCH`: updates `lastSeenEpoch` and allows normal connection.
+   - `MISMATCH`: automatically issues permanent ban via `PunishmentManager`, kicks the player, and broadcasts an alert (`instaff.devicelock.staff_alert`) with truncated token to online staff.
+   - `CORRUPTED`: fail-closed state rejecting OP logins with an error message and backup creation.
+3. **Console-Only Administrative Interface**:
+   - `/isdevice bind <player> <token>`: restricted strictly to console (`source.getEntity() == null`).
+   - `/isdevice unbind <player>`: console-only.
+   - `/isdevice info <player>` and `/isdevice list`: accessible to staff (OP level >= 2).
 
 ---
 

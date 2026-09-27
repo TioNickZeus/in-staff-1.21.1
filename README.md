@@ -53,6 +53,10 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 | `/playtime` | None | Everyone | Shows the sender's total accumulated server playtime. |
 | `/playtime` | `<player>` | OP Level 2 | Shows accumulated playtime and current online status of target player. |
 | `/seen` | `<player>` | OP Level 2 | Shows telemetry info: status, last seen date/time, first join, and total playtime. |
+| `/isdevice bind` | `<player> <token>` | Console Only | Binds a staff member's account to an authorized hardware installation token. |
+| `/isdevice unbind` | `<player>` | Console Only | Removes an existing hardware device binding for a staff account. |
+| `/isdevice info` | `<player>` | OP Level 2 | Displays device binding info (truncated token, bound date, last seen). |
+| `/isdevice list` | None | OP Level 2 | Lists all currently bound staff accounts and their last seen telemetry. |
 
 ---
 
@@ -114,6 +118,21 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 ```
 - Operates independently from the vanilla whitelist system.
 - Supports on-the-fly disk reloads and deterministic UUID storage in `instaff/whitelist.json`.
+
+#### 3. Staff Device Lock (`/isdevice`)
+```text
+# Console only:
+/isdevice bind <player> <token>
+/isdevice unbind <player>
+
+# OP level 2+:
+/isdevice info <player>
+/isdevice list
+```
+- Hardens OP-level accounts against nickname impersonation and credential theft on offline servers (`online-mode=false`).
+- **Console-Gated Binding**: Only the server console can register or update device bindings, preventing in-game TOFU hijack attacks.
+- **Pre-Verification Command Quarantine**: When enabled (`deviceLockEnabled = true`), bound staff accounts have their commands quarantined upon join until the client installation token is verified via the Play-phase integrity handshake.
+- **Automatic Ban on Impersonation**: Attempted logins presenting mismatched tokens are auto-banned permanently and online staff receive immediate broadcast alerts.
 
 ---
 

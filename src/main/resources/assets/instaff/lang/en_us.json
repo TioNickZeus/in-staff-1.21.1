@@ -83,5 +83,16 @@
   "instaff.command.history.entry": "§8[%s] §e%s §7by §f%s §7- Reason: §f%s §8(%s§8)",
   "instaff.command.playtime.self": "§aYour total accumulated playtime: §e%s",
   "instaff.command.playtime.other": "§aTotal playtime for §e%s§a: §e%s §7(Status: %s§7)",
-  "instaff.command.seen.result": "§bPlayer §e%s §bactivity info:\n§7Status: %s\n§7Last Seen: §f%s\n§7First Joined: §f%s\n§7Total Playtime: §e%s"
+  "instaff.command.seen.result": "§bPlayer §e%s §bactivity info:\n§7Status: %s\n§7Last Seen: §f%s\n§7First Joined: §f%s\n§7Total Playtime: §e%s",
+  "instaff.security.pending_device_verification": "§cValidating device credentials, please wait...",
+  "instaff.devicelock.ban_reason": "Account Compromise / Hardware Token Mismatch",
+  "instaff.devicelock.staff_alert": "§c[SECURITY ALERT] §eStaff account §f%s §cattempted login from an unauthorized machine (Token: §7%s§c)! Account has been auto-banned.",
+  "instaff.devicelock.corrupted_disconnect": "§cSecurity database corrupted. Contact server administration.",
+  "instaff.command.devicelock.bound": "§aSuccessfully bound staff account §e%s §ato device token §7%s§a.",
+  "instaff.command.devicelock.unbound": "§aRemoved device binding for staff account §e%s§a.",
+  "instaff.command.devicelock.not_bound": "§cStaff account §e%s §cis not bound to any device token.",
+  "instaff.command.devicelock.info": "§bDevice Lock Info for §e%s§b:\n§7Bound Token: §f%s\n§7Bound Date: §f%s\n§7Last Seen: §f%s",
+  "instaff.command.devicelock.list.header": "§b=== Bound Staff Accounts (§e%d§b) ===",
+  "instaff.command.devicelock.list.entry": "§e%s §7- Token: §f%s §7(Last seen: §f%s§7)",
+  "instaff.command.devicelock.list.empty": "§7No staff accounts are currently bound to any device token."
 }
