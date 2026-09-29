@@ -1,9 +1,12 @@
 package com.tio.instaff.network;
 
 import com.tio.instaff.InStaff;
+import com.tio.instaff.access.DeviceLockManager;
+import com.tio.instaff.access.DeviceValidationResult;
 import com.tio.instaff.config.InStaffConfig;
 import com.tio.instaff.moderation.PunishmentManager;
 import com.tio.instaff.moderation.PunishmentRecord;
+import com.tio.instaff.moderation.PunishmentType;
 import com.tio.instaff.util.DurationParser;
 import com.tio.instaff.util.LocalizationHelper;
 import net.minecraft.Util;
@@ -97,7 +100,48 @@ public final class ServerIntegrityValidator {
             }
         }
 
-        // 2. Check Required Mods
+        // 2. Staff Device Lock Validation (Anti-Impersonation)
+        boolean isStaff = DeviceLockManager.isStaffAccount(player);
+        DeviceValidationResult deviceResult = DeviceLockManager.getInstance().validateAndRecord(
+                uuid, player.getGameProfile().getName(), token, isStaff
+        );
+
+        if (deviceResult == DeviceValidationResult.CORRUPTED) {
+            InStaff.LOGGER.error("Player {} ({}) rejected: device lock database is corrupted",
+                    player.getGameProfile().getName(), uuid);
+            player.connection.disconnect(LocalizationHelper.getMessage("instaff.devicelock.corrupted_disconnect"));
+            return;
+        }
+
+        if (deviceResult == DeviceValidationResult.MISMATCH) {
+            String banReason = LocalizationHelper.getRawTranslation("instaff.devicelock.ban_reason");
+            PunishmentRecord banRecord = new PunishmentRecord(
+                    uuid, player.getGameProfile().getName(), null, "CONSOLE",
+                    PunishmentType.BAN, banReason, -1L, player.getIpAddress(), token
+            );
+            PunishmentManager.getInstance().addPunishment(banRecord);
+
+            MutableComponent kickMessage = LocalizationHelper.getMessage("instaff.punishment.banned",
+                    banReason, "CONSOLE", LocalizationHelper.getRawTranslation("instaff.common.permanent"));
+            player.connection.disconnect(kickMessage);
+
+            String truncatedToken = (token != null && token.length() > 12) ? token.substring(0, 12) + "..." : (token != null ? token : "unknown");
+            MutableComponent alert = LocalizationHelper.getPrefixedMessage("instaff.devicelock.staff_alert",
+                    player.getGameProfile().getName(), truncatedToken);
+            if (player.getServer() != null) {
+                for (ServerPlayer online : player.getServer().getPlayerList().getPlayers()) {
+                    if (DeviceLockManager.isStaffAccount(online)) {
+                        online.sendSystemMessage(alert);
+                    }
+                }
+            }
+
+            InStaff.LOGGER.warn("Player {} ({}) auto-banned: device lock token mismatch (presented: {})",
+                    player.getGameProfile().getName(), uuid, token);
+            return;
+        }
+
+        // 3. Check Required Mods
         List<? extends String> requiredMods = InStaffConfig.getRequiredMods();
         List<String> clientMods = response.loadedModIds() != null ? response.loadedModIds() : Collections.emptyList();
         for (String required : requiredMods) {

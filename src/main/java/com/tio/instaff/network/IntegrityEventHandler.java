@@ -1,6 +1,7 @@
 package com.tio.instaff.network;
 
 import com.tio.instaff.InStaff;
+import com.tio.instaff.access.DeviceLockManager;
 import net.minecraft.server.level.ServerPlayer;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
@@ -19,6 +20,7 @@ public final class IntegrityEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            DeviceLockManager.getInstance().onPlayerLoggedIn(player);
             ServerIntegrityValidator.getInstance().initiateHandshake(player);
         }
     }
@@ -26,6 +28,7 @@ public final class IntegrityEventHandler {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            DeviceLockManager.getInstance().onPlayerLoggedOut(player.getUUID());
             ServerIntegrityValidator.getInstance().onPlayerLeave(player.getUUID());
         }
     }

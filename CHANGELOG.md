@@ -2,6 +2,33 @@
 
 All notable changes to the In-Staff mod will be documented in this file.
 
+## [1.1.1] - 2026-09-27
+
+### Added
+- **Staff Device Lock Subsystem (`com.tio.instaff.access`)**:
+  - Implemented `DeviceLockRecord.java` POJO storing `accountUUID`, `boundToken`, `boundEpoch`, and `lastSeenEpoch`.
+  - Implemented `DeviceLockManager.java` state engine with atomic `.tmp` persistence (`instaff/device_locks.json`), fail-closed corruption detection (`.corrupt.<timestamp>` backups), in-memory command quarantine (`pendingDeviceLocks`), and centralized OP-level staff resolution (`isStaffAccount`).
+  - Added `DeviceValidationResult.java` enum (`NOT_APPLICABLE`, `CORRUPTED`, `NO_BINDING`, `MATCH`, `MISMATCH`).
+- **Pre-Verification Command Quarantine**:
+  - Hooked `DeviceLockManager.onPlayerLoggedIn` into `IntegrityEventHandler.java` to place bound staff accounts into command quarantine upon world join.
+  - Intercepted `CommandEvent` in `ModerationEventHandler.java` to block command execution for quarantined staff with localized feedback (`instaff.security.pending_device_verification`).
+  - Implemented proactive quarantine clearance on all 5 terminal outcomes in `DeviceLockManager.validateAndRecord`.
+  - Hooked `DeviceLockManager.onPlayerLoggedOut` into `IntegrityEventHandler.java` as a secondary safety net.
+- **Handshake Verification & Auto-Ban**:
+  - Integrated device lock validation into `ServerIntegrityValidator.handleResponse` following ban evasion checks.
+  - Automatically issues a permanent ban via `PunishmentManager` and disconnects the player upon token mismatch, broadcasting an alert (`instaff.devicelock.staff_alert`) with truncated token to online staff.
+- **Administrative Command Suite (`/isdevice`)**:
+  - Implemented `DeviceLockCommand.java` registered in `ModCommands.java`:
+    - `/isdevice bind <player> <token>`: restricted strictly to server console (`source.getEntity() == null`).
+    - `/isdevice unbind <player>`: restricted strictly to server console.
+    - `/isdevice info <player>`: OP level 2+ permission.
+    - `/isdevice list`: OP level 2+ permission.
+- **Configuration & Localization**:
+  - Added `deviceLockEnabled = false` under `[security]` in `InStaffConfig.java` with defensive `isDeviceLockEnabled()` accessor guarded by `SPEC.isLoaded()`.
+  - Added complete localization strings in both `en_us.json` and `pt_br.json`.
+- **Automated Test Suite**:
+  - Added `DeviceLockManagerTest.java` covering TC-01 through TC-10 (10/10 tests passing).
+
 ## [1.1.0] - 2026-09-25
 
 ### Added

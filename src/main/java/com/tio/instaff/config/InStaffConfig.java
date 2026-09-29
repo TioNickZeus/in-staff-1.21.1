@@ -37,6 +37,9 @@ public final class InStaffConfig {
     public static final ModConfigSpec.ConfigValue<List<? extends String>> BLACKLISTED_HASHES;
     public static final ModConfigSpec.ConfigValue<List<? extends String>> BLACKLISTED_MOD_IDS;
 
+    // Security
+    public static final ModConfigSpec.BooleanValue DEVICE_LOCK_ENABLED;
+
     static {
         BUILDER.comment("In-Staff Moderation Settings").push("moderation");
         BROADCAST_PUNISHMENTS = BUILDER
@@ -108,6 +111,18 @@ public final class InStaffConfig {
         BLACKLISTED_MOD_IDS = BUILDER
                 .comment("List of forbidden mod IDs (e.g., cheat mods like xray, baritone, freecam).")
                 .defineList("blacklistedModIds", List.of("xray", "freecam", "baritone"), o -> o instanceof String);
+        BUILDER.pop();
+
+        BUILDER.comment("In-Staff Security and Device Lock Settings").push("security");
+        DEVICE_LOCK_ENABLED = BUILDER
+                .comment("Binds staff (OP level 2+) accounts to a specific hardware installation token,",
+                        "set manually per-account via the server console (`/isdevice bind <player> <token>`).",
+                        "A mismatch results in an automatic ban and a staff alert.",
+                        "Off by default — enable only if you specifically want to harden staff accounts",
+                        "against nickname impersonation.",
+                        "Accounts are protected only once explicitly bound via console — enabling this",
+                        "does not retroactively lock every existing OP account.")
+                .define("deviceLockEnabled", false);
         BUILDER.pop();
     }
 
@@ -185,5 +200,9 @@ public final class InStaffConfig {
 
     public static List<? extends String> getBlacklistedModIds() {
         return SPEC.isLoaded() ? BLACKLISTED_MOD_IDS.get() : List.of("xray", "freecam", "baritone");
+    }
+
+    public static boolean isDeviceLockEnabled() {
+        return SPEC.isLoaded() ? DEVICE_LOCK_ENABLED.get() : false;
     }
 }

@@ -28,6 +28,7 @@ public final class ModCommands {
         BanItemCommand.register(dispatcher);
         HistoryCommand.register(dispatcher);
         PlaytimeCommand.register(dispatcher);
+        DeviceLockCommand.register(dispatcher);
 
         InStaff.LOGGER.info("Registered all In-Staff commands.");
     }
