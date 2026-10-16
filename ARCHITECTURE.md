@@ -215,7 +215,7 @@ The client integrity system verifies that connecting clients are running an appr
 | Config Key | Type | Default | Description |
 |:---|:---|:---|:---|
 | `integrity.enabled` | bool | `true` | Enable/disable the integrity handshake |
-| `integrity.timeoutSeconds` | int | `10` | Seconds to wait for client response before kicking |
+| `integrity.timeoutSeconds` | int | `60` | Seconds to wait for client response before kicking |
 | `integrity.requiredMods` | list | `[]` | Mod IDs that must be present on the client |
 | `integrity.blacklistedHashes` | list | `[]` | SHA-256 hashes of known cheat mods/packs |
 | `integrity.blacklistedModIds` | list | `["xray", "freecam", "baritone"]` | Mod IDs that are forbidden |

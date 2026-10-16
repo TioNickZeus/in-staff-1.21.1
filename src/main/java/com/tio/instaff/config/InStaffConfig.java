@@ -98,7 +98,7 @@ public final class InStaffConfig {
 
         INTEGRITY_TIMEOUT_SECONDS = BUILDER
                 .comment("Timeout in seconds before kicking a client that failed to respond to the integrity handshake.")
-                .defineInRange("timeoutSeconds", 10, 3, 120);
+                .defineInRange("timeoutSeconds", 60, 3, 600);
 
         REQUIRED_MODS = BUILDER
                 .comment("List of required mod IDs that must be present on connecting clients.")
@@ -187,7 +187,7 @@ public final class InStaffConfig {
     }
 
     public static int getIntegrityTimeoutSeconds() {
-        return SPEC.isLoaded() ? INTEGRITY_TIMEOUT_SECONDS.get() : 10;
+        return SPEC.isLoaded() ? INTEGRITY_TIMEOUT_SECONDS.get() : 60;
     }
 
     public static List<? extends String> getRequiredMods() {

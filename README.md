@@ -232,7 +232,7 @@ The server configuration file is located at `world/serverconfig/instaff-server.t
     # Enable client mod/hash integrity verification handshake
     enabled = true
     # Timeout in seconds before kicking unresponsive clients
-    timeoutSeconds = 10
+    timeoutSeconds = 60
     # Mod IDs required on connecting clients
     requiredMods = []
     # Blacklisted SHA-256 hashes of forbidden jars

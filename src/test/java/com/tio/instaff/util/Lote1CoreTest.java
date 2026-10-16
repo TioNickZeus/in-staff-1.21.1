@@ -34,7 +34,7 @@ class Lote1CoreTest {
             assertTrue(InStaffConfig.isQuarantineCorruptedEntities());
             assertTrue(InStaffConfig.isLogQuarantineEvents());
             assertTrue(InStaffConfig.isIntegrityEnabled());
-            assertEquals(10, InStaffConfig.getIntegrityTimeoutSeconds());
+            assertEquals(60, InStaffConfig.getIntegrityTimeoutSeconds());
             assertNotNull(InStaffConfig.getRequiredMods());
             assertNotNull(InStaffConfig.getBlacklistedHashes());
             assertEquals(3, InStaffConfig.getBlacklistedModIds().size());
