@@ -3,44 +3,56 @@ package com.tio.instaff.client.integrity;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("MachineIdFetcher & Token Derivation Tests")
+@DisplayName("MachineIdFetcher Hybrid Token Derivation & Native Fingerprint Tests")
 class MachineIdFetcherTest {
 
     @Test
-    @DisplayName("TC-01: Stable deterministic SHA-256 token derivation for identical hardware IDs")
+    @DisplayName("TC-01: Stable deterministic SHA-256 token derivation for identical serverKey and fingerprint")
     void testDeterministicTokenGeneration() {
-        String rawHardwareId = "550e8400-e29b-41d4-a716-446655440000";
+        String serverKey = "A9F3K2L8P1";
+        String fingerprint = "cpu=Intel64|arch=AMD64|osArch=amd64|cores=16|ram=34359738368|disk=1000204886016|os=Windows 11|user=Player";
 
-        String token1 = MachineIdFetcher.toSha256Token(rawHardwareId);
-        String token2 = MachineIdFetcher.toSha256Token(rawHardwareId);
+        String token1 = MachineIdFetcher.deriveToken(serverKey, fingerprint);
+        String token2 = MachineIdFetcher.deriveToken(serverKey, fingerprint);
 
         assertNotNull(token1);
         assertNotNull(token2);
-        assertEquals(token1, token2, "Token derivation must be strictly deterministic for the same hardware ID");
+        assertEquals(token1, token2, "Token derivation must be strictly deterministic for the same serverKey and fingerprint");
     }
 
     @Test
-    @DisplayName("TC-02: Distinct hardware identifiers produce distinct tokens (Machine HWID isolation)")
-    void testDistinctHardwareGeneratesDistinctTokens() {
-        String hwidA = "11111111-2222-3333-4444-555555555555";
-        String hwidB = "99999999-8888-7777-6666-555555555555";
+    @DisplayName("TC-02: Cross-server isolation - distinct serverKeys yield distinct tokens for the same machine")
+    void testCrossServerIsolation() {
+        String fingerprint = "cpu=Intel64|arch=AMD64|osArch=amd64|cores=8|ram=17179869184|disk=500107862016|os=Linux|user=player";
 
-        String tokenA = MachineIdFetcher.toSha256Token(hwidA);
-        String tokenB = MachineIdFetcher.toSha256Token(hwidB);
+        String tokenServerA = MachineIdFetcher.deriveToken("A9F3K2L8P1", fingerprint);
+        String tokenServerB = MachineIdFetcher.deriveToken("Z1X2C3V4B5", fingerprint);
 
-        assertNotEquals(tokenA, tokenB, "Distinct hardware IDs must derive completely different tokens");
+        assertNotEquals(tokenServerA, tokenServerB,
+                "Distinct servers with different serverKeys must derive distinct client tokens for privacy");
     }
 
     @Test
-    @DisplayName("TC-03: Format conformity - derived token is a valid 36-character UUID")
+    @DisplayName("TC-03: Cross-machine isolation - distinct fingerprints yield distinct tokens for the same serverKey")
+    void testCrossMachineIsolation() {
+        String serverKey = "A9F3K2L8P1";
+        String fpA = "cpu=CPU_A|arch=AMD64|cores=8|ram=17179869184";
+        String fpB = "cpu=CPU_B|arch=AMD64|cores=16|ram=34359738368";
+
+        String tokenA = MachineIdFetcher.deriveToken(serverKey, fpA);
+        String tokenB = MachineIdFetcher.deriveToken(serverKey, fpB);
+
+        assertNotEquals(tokenA, tokenB, "Distinct machine fingerprints must derive completely different tokens");
+    }
+
+    @Test
+    @DisplayName("TC-04: Format conformity - derived token is a valid 36-character lowercase UUID")
     void testTokenFormatConformity() {
-        String rawId = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
-        String token = MachineIdFetcher.toSha256Token(rawId);
+        String token = MachineIdFetcher.deriveToken("KEY1234567", "cpu=test|cores=4");
 
         assertNotNull(token);
         assertEquals(36, token.length(), "Token must be exactly 36 characters");
@@ -49,93 +61,48 @@ class MachineIdFetcherTest {
     }
 
     @Test
-    @DisplayName("TC-04: Graceful fallback for null or empty input without exceptions")
+    @DisplayName("TC-05: Graceful fallback for null or blank serverKey or fingerprint without exceptions")
     void testNullAndEmptyFallback() {
-        String tokenFromNull = MachineIdFetcher.toSha256Token(null);
-        String tokenFromEmpty = MachineIdFetcher.toSha256Token("");
-        String tokenFromWhitespace = MachineIdFetcher.toSha256Token("   \t\n  ");
+        String tokenNullKey = MachineIdFetcher.deriveToken(null, "cpu=test|cores=4");
+        String tokenBlankKey = MachineIdFetcher.deriveToken("   ", "cpu=test|cores=4");
+        String tokenNullFp = MachineIdFetcher.deriveToken("A9F3K2L8P1", null);
+        String tokenEmptyFp = MachineIdFetcher.deriveToken("A9F3K2L8P1", "");
 
-        assertNotNull(tokenFromNull);
-        assertNotNull(tokenFromEmpty);
-        assertNotNull(tokenFromWhitespace);
+        assertDoesNotThrow(() -> UUID.fromString(tokenNullKey));
+        assertDoesNotThrow(() -> UUID.fromString(tokenBlankKey));
+        assertDoesNotThrow(() -> UUID.fromString(tokenNullFp));
+        assertDoesNotThrow(() -> UUID.fromString(tokenEmptyFp));
 
-        assertDoesNotThrow(() -> UUID.fromString(tokenFromNull));
-        assertDoesNotThrow(() -> UUID.fromString(tokenFromEmpty));
-        assertDoesNotThrow(() -> UUID.fromString(tokenFromWhitespace));
-
-        assertNotEquals(tokenFromNull, tokenFromEmpty, "Null and empty fallbacks should produce independent random UUIDs");
+        assertNotEquals(tokenNullKey, tokenBlankKey, "Null and blank fallbacks should produce independent random UUIDs");
+        assertNotEquals(tokenNullFp, tokenEmptyFp, "Null and empty fingerprint fallbacks should produce independent random UUIDs");
     }
 
     @Test
-    @DisplayName("TC-05: OS Output Extraction - Windows reg query output parsing")
-    void testWindowsRegQueryExtraction() {
-        String sampleWindowsOutput = "\r\n" +
-                "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Cryptography\r\n" +
-                "    MachineGuid    REG_SZ    d2b82e25-1e34-4b55-a4b5-6f1c7f998811\r\n" +
-                "\r\n";
+    @DisplayName("TC-06: Native fingerprint collection is non-blank, deterministic, and safe in headless test runtime")
+    void testNativeFingerprintCollection() {
+        String fp1 = assertDoesNotThrow(MachineIdFetcher::collectNativeFingerprint);
+        String fp2 = assertDoesNotThrow(MachineIdFetcher::collectNativeFingerprint);
 
-        Optional<String> extracted = MachineIdFetcher.extractUuidFromWindowsOutput(sampleWindowsOutput);
-        assertTrue(extracted.isPresent());
-        assertEquals("d2b82e25-1e34-4b55-a4b5-6f1c7f998811", extracted.get());
-
-        // Malformed or empty Windows output
-        assertTrue(MachineIdFetcher.extractUuidFromWindowsOutput("ERROR: The system was unable to find the specified registry key or value.").isEmpty());
-        assertTrue(MachineIdFetcher.extractUuidFromWindowsOutput(null).isEmpty());
-        assertTrue(MachineIdFetcher.extractUuidFromWindowsOutput("").isEmpty());
+        assertNotNull(fp1);
+        assertFalse(fp1.isBlank(), "Collected native fingerprint must never be blank");
+        assertEquals(fp1, fp2, "In-memory native fingerprint collection must remain deterministic across calls");
     }
 
     @Test
-    @DisplayName("TC-05: OS Output Extraction - Linux /etc/machine-id parsing")
-    void testLinuxMachineIdExtraction() {
-        String sample32Hex = "b925b3901b0f4cfd911b02d847167512\n";
-        Optional<String> extractedHex = MachineIdFetcher.sanitizeLinuxMachineId(sample32Hex);
-        assertTrue(extractedHex.isPresent());
-        assertEquals("b925b3901b0f4cfd911b02d847167512", extractedHex.get());
+    @DisplayName("TC-07: Sanitization - generateClientToken hashes signals one-way without leaking raw machine data")
+    void testSensitiveSignalSanitization() {
+        String sensitiveMarker = "SENSITIVE-HOST-MARKER-998877";
+        String tokenFromSensitive = MachineIdFetcher.deriveToken("A9F3K2L8P1", sensitiveMarker);
 
-        String sampleUuid = "b925b390-1b0f-4cfd-911b-02d847167512\n";
-        Optional<String> extractedUuid = MachineIdFetcher.sanitizeLinuxMachineId(sampleUuid);
-        assertTrue(extractedUuid.isPresent());
-        assertEquals("b925b390-1b0f-4cfd-911b-02d847167512", extractedUuid.get());
+        assertEquals(36, tokenFromSensitive.length());
+        assertFalse(tokenFromSensitive.contains("SENSITIVE"), "Derived token must never contain raw fingerprint fragments");
+        assertDoesNotThrow(() -> UUID.fromString(tokenFromSensitive));
 
-        // Invalid Linux machine ID
-        assertTrue(MachineIdFetcher.sanitizeLinuxMachineId("too-short").isEmpty());
-        assertTrue(MachineIdFetcher.sanitizeLinuxMachineId(null).isEmpty());
-        assertTrue(MachineIdFetcher.sanitizeLinuxMachineId("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz").isEmpty());
-    }
+        String generated1 = MachineIdFetcher.generateClientToken("A9F3K2L8P1");
+        String generated2 = MachineIdFetcher.generateClientToken("A9F3K2L8P1");
+        String generatedOtherServer = MachineIdFetcher.generateClientToken("B2G4H6J8K0");
 
-    @Test
-    @DisplayName("TC-05: OS Output Extraction - macOS ioreg output parsing")
-    void testMacIoregExtraction() {
-        String sampleMacOutput = "  |   \"IOPlatformSerialNumber\" = \"C02ABCDEFGH1\"\n" +
-                "  |   \"IOPlatformUUID\" = \"4A582F72-3580-5B92-9C45-A6724E62F93C\"\n" +
-                "  |   \"clock-frequency\" = <00676980>\n";
-
-        Optional<String> extracted = MachineIdFetcher.extractUuidFromMacOutput(sampleMacOutput);
-        assertTrue(extracted.isPresent());
-        assertEquals("4A582F72-3580-5B92-9C45-A6724E62F93C", extracted.get());
-
-        // Malformed macOS output
-        assertTrue(MachineIdFetcher.extractUuidFromMacOutput("No matching property found").isEmpty());
-        assertTrue(MachineIdFetcher.extractUuidFromMacOutput(null).isEmpty());
-        assertTrue(MachineIdFetcher.extractUuidFromMacOutput("").isEmpty());
-    }
-
-    @Test
-    @DisplayName("TC-08: Exception & Sensitive Data Sanitization - Raw hardware string never leaked")
-    void testSensitiveHardwareSanitization() {
-        String sensitiveString = "SENSITIVE-RAW-HWID-12345-SECRET";
-
-        // Feed sensitive invalid format to parsers and verify no exception leaks it
-        Optional<String> winResult = MachineIdFetcher.extractUuidFromWindowsOutput("Error output with " + sensitiveString);
-        assertTrue(winResult.isEmpty());
-
-        Optional<String> linuxResult = MachineIdFetcher.sanitizeLinuxMachineId(sensitiveString);
-        assertTrue(linuxResult.isEmpty());
-
-        Optional<String> macResult = MachineIdFetcher.extractUuidFromMacOutput("Random line with " + sensitiveString);
-        assertTrue(macResult.isEmpty());
-
-        // Verify that fetchRawMachineIdentifier does not throw any unhandled exceptions on current host
-        assertDoesNotThrow(MachineIdFetcher::fetchRawMachineIdentifier);
+        assertEquals(generated1, generated2, "generateClientToken must be deterministic for the same serverKey");
+        assertNotEquals(generated1, generatedOtherServer, "generateClientToken must isolate tokens across different serverKeys");
     }
 }
