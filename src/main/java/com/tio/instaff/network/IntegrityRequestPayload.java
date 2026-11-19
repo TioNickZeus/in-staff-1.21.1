@@ -18,7 +18,8 @@ public record IntegrityRequestPayload(
         int timeoutSeconds,
         List<String> requiredMods,
         List<String> blacklistedModIds,
-        List<String> blacklistedHashes
+        List<String> blacklistedHashes,
+        String serverKey
 ) implements CustomPacketPayload {
 
     public static final Type<IntegrityRequestPayload> TYPE =
@@ -32,7 +33,8 @@ public record IntegrityRequestPayload(
                 buf.readVarInt(),
                 readStringList(buf),
                 readStringList(buf),
-                readStringList(buf)
+                readStringList(buf),
+                buf.readUtf(64)
         );
     }
 
@@ -41,6 +43,7 @@ public record IntegrityRequestPayload(
         writeStringList(buf, this.requiredMods);
         writeStringList(buf, this.blacklistedModIds);
         writeStringList(buf, this.blacklistedHashes);
+        buf.writeUtf(this.serverKey != null ? this.serverKey : "", 64);
     }
 
     @Override

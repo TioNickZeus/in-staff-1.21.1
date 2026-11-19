@@ -33,7 +33,7 @@ class Lote5NetworkTest {
             List<String> blacklistedIds = List.of("xray", "baritone");
             List<String> blacklistedHashes = List.of("abc123hash", "def456hash");
 
-            IntegrityRequestPayload original = new IntegrityRequestPayload(15, required, blacklistedIds, blacklistedHashes);
+            IntegrityRequestPayload original = new IntegrityRequestPayload(15, required, blacklistedIds, blacklistedHashes, "A9F3K2L8P1");
 
             ByteBuf buffer = Unpooled.buffer();
             RegistryFriendlyByteBuf friendlyBuf = new RegistryFriendlyByteBuf(buffer, null);
@@ -46,6 +46,7 @@ class Lote5NetworkTest {
             assertEquals(required, decoded.requiredMods());
             assertEquals(blacklistedIds, decoded.blacklistedModIds());
             assertEquals(blacklistedHashes, decoded.blacklistedHashes());
+            assertEquals("A9F3K2L8P1", decoded.serverKey());
         }
 
         @Test

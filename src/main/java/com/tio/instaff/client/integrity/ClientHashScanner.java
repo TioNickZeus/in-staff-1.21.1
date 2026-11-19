@@ -8,6 +8,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -21,15 +22,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 /**
- * Client-side scanner for mod integrity and token binding.
+ * Client-side scanner for mod integrity and dynamic per-server token derivation.
  * Scans local mods/ directory, computes SHA-256 file hashes,
- * and maintains a persistent installation token to deter offline ban evasion.
+ * and derives an in-memory hybrid token using the server's serverKey.
  * This class is strictly CLIENT-side and must never be loaded by dedicated servers.
  */
 public final class ClientHashScanner {
-
-    private static final String TOKEN_FILE = ".instaff_token";
-    private static volatile String cachedToken = null;
 
     /** Single daemon worker so a scan never blocks the client render thread. */
     private static final ExecutorService SCAN_EXECUTOR = Executors.newSingleThreadExecutor(runnable -> {
@@ -41,51 +39,6 @@ public final class ClientHashScanner {
     private static final AtomicBoolean SCAN_IN_PROGRESS = new AtomicBoolean(false);
 
     private ClientHashScanner() {
-    }
-
-    /**
-     * Retrieves or generates a persistent installation token unique to this client installation.
-     */
-    @NotNull
-    public static synchronized String getOrCreateInstallationToken() {
-        if (cachedToken != null) {
-            return cachedToken;
-        }
-
-        Path tokenPath = FMLPaths.GAMEDIR.get().resolve(TOKEN_FILE);
-        try {
-            if (Files.exists(tokenPath)) {
-                String read = Files.readString(tokenPath).trim();
-                if (!read.isBlank()) {
-                    cachedToken = read;
-                    return cachedToken;
-                }
-            }
-
-            Optional<String> rawId = MachineIdFetcher.fetchRawMachineIdentifier();
-            if (rawId.isPresent()) {
-                String deterministicToken = MachineIdFetcher.toSha256Token(rawId.get());
-                Files.writeString(tokenPath, deterministicToken);
-                cachedToken = deterministicToken;
-                return cachedToken;
-            }
-
-            // Transient failure or unsupported OS: fallback to in-memory token without persisting to disk
-            InStaff.LOGGER.warn("[In-Staff] Could not obtain deterministic machine identifier. Using transient token for this session without persisting to disk.");
-            cachedToken = UUID.randomUUID().toString();
-            return cachedToken;
-        } catch (Exception e) {
-            InStaff.LOGGER.error("Failed to read/write In-Staff client installation token, using transient token", e);
-            cachedToken = UUID.randomUUID().toString();
-            return cachedToken;
-        }
-    }
-
-    /**
-     * Resets the in-memory cached token. Visible for testing.
-     */
-    static synchronized void resetCachedTokenForTesting() {
-        cachedToken = null;
     }
 
     /**
@@ -168,11 +121,15 @@ public final class ClientHashScanner {
             return;
         }
 
+        // Capture GPU info safely on client/render thread before dispatching off-thread scan
+        MachineIdFetcher.captureGpuInfoOnRenderThread();
+        final String serverKey = request.serverKey();
+
         // Hashing every jar in mods/ is disk-bound and can take seconds on a large modpack.
         // It must not run on the render thread, or the client freezes on join and may even
         // blow the server's handshake timeout.
         CompletableFuture
-                .supplyAsync(ClientHashScanner::buildResponse, SCAN_EXECUTOR)
+                .supplyAsync(() -> buildResponse(serverKey), SCAN_EXECUTOR)
                 .whenComplete((response, error) -> {
                     SCAN_IN_PROGRESS.set(false);
                     if (error != null || response == null) {
@@ -193,8 +150,8 @@ public final class ClientHashScanner {
     }
 
     @NotNull
-    private static IntegrityResponsePayload buildResponse() {
-        String token = getOrCreateInstallationToken();
+    private static IntegrityResponsePayload buildResponse(@Nullable String serverKey) {
+        String token = MachineIdFetcher.generateClientToken(serverKey);
         Map<String, String> hashes = scanModsDirectory();
         List<String> loadedModIds = collectLoadedModIds();
         return new IntegrityResponsePayload(token, hashes, loadedModIds);

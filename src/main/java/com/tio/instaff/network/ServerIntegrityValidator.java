@@ -1,6 +1,7 @@
 package com.tio.instaff.network;
 
 import com.tio.instaff.InStaff;
+import com.tio.instaff.access.ClientTokenManager;
 import com.tio.instaff.access.DeviceLockManager;
 import com.tio.instaff.access.DeviceValidationResult;
 import com.tio.instaff.config.InStaffConfig;
@@ -57,7 +58,8 @@ public final class ServerIntegrityValidator {
                 InStaffConfig.getIntegrityTimeoutSeconds(),
                 new ArrayList<>(InStaffConfig.getRequiredMods()),
                 new ArrayList<>(InStaffConfig.getBlacklistedModIds()),
-                new ArrayList<>(InStaffConfig.getBlacklistedHashes())
+                new ArrayList<>(InStaffConfig.getBlacklistedHashes()),
+                ClientTokenManager.getInstance().getServerKey()
         );
 
         PacketDistributor.sendToPlayer(player, request);
@@ -75,6 +77,7 @@ public final class ServerIntegrityValidator {
         String token = response.clientToken();
         if (token != null && !token.isBlank()) {
             knownClientTokens.put(uuid, token);
+            ClientTokenManager.getInstance().recordPlayerToken(uuid, player.getGameProfile().getName(), token);
         }
         InStaff.LOGGER.info("Processing integrity response for player {} ({}) with installation token {}",
                 player.getGameProfile().getName(), uuid, token);
