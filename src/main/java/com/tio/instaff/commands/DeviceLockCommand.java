@@ -2,8 +2,10 @@ package com.tio.instaff.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.tio.instaff.access.ClientTokenManager;
 import com.tio.instaff.access.DeviceLockManager;
 import com.tio.instaff.access.DeviceLockRecord;
+import com.tio.instaff.network.ServerIntegrityValidator;
 import com.tio.instaff.util.LocalizationHelper;
 import com.tio.instaff.util.PlayerResolver;
 import net.minecraft.commands.CommandSourceStack;
@@ -21,7 +23,7 @@ import java.util.UUID;
 
 /**
  * Command suite for Staff Device Lock (/isdevice):
- * - /isdevice bind <player> <token> (Console only)
+ * - /isdevice bind <player> [token] (Console only)
  * - /isdevice unbind <player> (Console only)
  * - /isdevice info <player> (OP level >= 2)
  * - /isdevice list (OP level >= 2)
@@ -39,6 +41,7 @@ public final class DeviceLockCommand {
                         .requires(source -> source.getEntity() == null) // Console-only enforcement
                         .then(Commands.argument("player", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(ctx.getSource().getServer().getPlayerNames(), builder))
+                                .executes(ctx -> executeBind(ctx.getSource(), StringArgumentType.getString(ctx, "player"), null))
                                 .then(Commands.argument("token", StringArgumentType.string())
                                         .executes(ctx -> executeBind(ctx.getSource(), StringArgumentType.getString(ctx, "player"), StringArgumentType.getString(ctx, "token"))))))
                 .then(Commands.literal("unbind")
@@ -57,11 +60,25 @@ public final class DeviceLockCommand {
         );
     }
 
-    private static int executeBind(CommandSourceStack source, String targetName, String token) {
+    private static int executeBind(CommandSourceStack source, String targetName, @Nullable String explicitToken) {
         UUID targetUUID = PlayerResolver.resolveUUID(source.getServer(), targetName);
-        DeviceLockManager.getInstance().bindDirect(targetUUID, targetName, token);
+        String token = (explicitToken != null && !explicitToken.isBlank())
+                ? explicitToken.trim()
+                : ClientTokenManager.getInstance().findTokenByPlayer(targetUUID);
 
-        String truncated = truncateToken(token);
+        if (token == null || token.isBlank()) {
+            token = ServerIntegrityValidator.getInstance().getKnownClientToken(targetUUID);
+        }
+
+        if (token == null || token.isBlank()) {
+            source.sendFailure(LocalizationHelper.getPrefixedMessage("instaff.command.devicelock.no_known_token", targetName));
+            return 0;
+        }
+
+        String safeToken = token.trim();
+        DeviceLockManager.getInstance().bindDirect(targetUUID, targetName, safeToken);
+
+        String truncated = truncateToken(safeToken);
         source.sendSuccess(() -> LocalizationHelper.getPrefixedMessage("instaff.command.devicelock.bound", targetName, truncated), true);
         return 1;
     }

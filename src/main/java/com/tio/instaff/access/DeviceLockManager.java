@@ -4,6 +4,7 @@ import com.google.gson.JsonParseException;
 import com.google.gson.reflect.TypeToken;
 import com.tio.instaff.InStaff;
 import com.tio.instaff.config.InStaffConfig;
+import com.tio.instaff.network.ServerIntegrityValidator;
 import com.tio.instaff.util.FileStorageUtil;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -55,6 +56,10 @@ public final class DeviceLockManager {
             return configOverrideForTesting;
         }
         return InStaffConfig.isDeviceLockEnabled();
+    }
+
+    public boolean isEnabled() {
+        return isFeatureEnabled();
     }
 
     private Path getStoragePath() {
@@ -201,6 +206,12 @@ public final class DeviceLockManager {
 
         DeviceLockRecord record = bindings.get(uuid);
         if (record == null) {
+            if (token != null && !token.isBlank()) {
+                String safeName = (name != null && !name.isBlank()) ? name : "Unknown";
+                bindDirect(uuid, safeName, token.trim());
+                InStaff.LOGGER.info("Auto-bound staff account {} ({}) on first verified handshake (TOFU).", safeName, uuid);
+                return DeviceValidationResult.MATCH;
+            }
             return DeviceValidationResult.NO_BINDING;
         }
 
@@ -213,6 +224,40 @@ public final class DeviceLockManager {
             return DeviceValidationResult.MATCH;
         } else {
             return DeviceValidationResult.MISMATCH;
+        }
+    }
+
+    /**
+     * Attempts to immediately auto-bind an account when operator privileges (/op) are granted,
+     * looking up the player's latest token in ClientTokenManager with fallback to ServerIntegrityValidator.
+     */
+    public boolean tryAutoBindOnOp(@NotNull UUID targetUUID, @Nullable String targetName) {
+        String knownToken = ClientTokenManager.getInstance().findTokenByPlayer(targetUUID);
+        if (knownToken == null || knownToken.isBlank()) {
+            knownToken = ServerIntegrityValidator.getInstance().getKnownClientToken(targetUUID);
+        }
+        return tryAutoBindOnOp(targetUUID, targetName, knownToken);
+    }
+
+    /**
+     * Attempts to immediately auto-bind an account to the supplied token when operator privileges are granted.
+     * No-op when feature is disabled, database is corrupted, account is already bound, or token is blank.
+     */
+    public boolean tryAutoBindOnOp(@NotNull UUID targetUUID, @Nullable String targetName, @Nullable String knownToken) {
+        if (!isFeatureEnabled() || isCorruptedState) {
+            return false;
+        }
+        if (knownToken == null || knownToken.isBlank()) {
+            return false;
+        }
+        String safeName = (targetName != null && !targetName.isBlank()) ? targetName : "Unknown";
+        synchronized (lock) {
+            if (isCorruptedState || bindings.containsKey(targetUUID)) {
+                return false;
+            }
+            bindDirect(targetUUID, safeName, knownToken.trim());
+            InStaff.LOGGER.info("Auto-bound newly promoted operator {} ({}) to known client token.", safeName, targetUUID);
+            return true;
         }
     }
 
