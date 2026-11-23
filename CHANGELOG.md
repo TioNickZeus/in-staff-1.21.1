@@ -2,6 +2,33 @@
 
 All notable changes to the In-Staff mod will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Hybrid Client Token Core (50% Server / 50% Client)**:
+  - Implemented `ClientTokenManager.java` managing a persistent 10-character alphanumeric `serverKey` (`SecureRandom`) and per-player token records in `instaff/client_tokens.json` via atomic `.tmp` writes.
+  - Added `serverKey` field and `StreamCodec` serialization to `IntegrityRequestPayload.java`; `ServerIntegrityValidator.java` sends `serverKey` on handshake and persists received player tokens.
+- **OP Device Auto-Bind & `/isdevice` Enhancement**:
+  - Enabled Trust-On-First-Use (TOFU) auto-bind in `DeviceLockManager.validateAndRecord()` for unbound OP accounts presenting a valid token when `deviceLockEnabled = true`.
+  - Added `AccessEventHandler.onCommandEvent()` (`EventPriority.LOWEST`) and `DeviceLockManager.tryAutoBindOnOp()` to immediately bind newly promoted operators on `/op <player>` when a recorded token exists.
+  - Made `<token>` optional in `/isdevice bind <player> [token]` (`DeviceLockCommand.java`) with `ClientTokenManager` and `ServerIntegrityValidator` fallback lookup, plus localized `instaff.command.devicelock.no_known_token` feedback.
+- **First-Time Multiplayer Data Notice (Client-Side)**:
+  - Added `InStaffClientConfig.java` (`ModConfig.Type.CLIENT`, `config/instaff-client.toml`) persisting `[privacy] multiplayerNoticeAccepted`.
+  - Added `MultiplayerConsentScreen.java` (2-button Yes/No prompt) and `MultiplayerConsentHandler.java` registered in `InStaffClient.java` via `ScreenEvent.Opening`.
+- **Automated Tests**:
+  - Added `ClientTokenManagerTest.java`, `InStaffClientConfigTest.java`, expanded `DeviceLockManagerTest.java` (TC-11 through TC-13), and updated `MachineIdFetcherTest.java` and `Lote5NetworkTest.java` (87 total tests across 32 suites).
+
+### Changed
+- **Eliminated External OS Queries & Local Token Files (CurseForge / Modrinth Compliance)**:
+  - Refactored `MachineIdFetcher.java` to remove 100% of `ProcessBuilder` calls (`reg query`, `ioreg`), `/etc/machine-id` file reads, and parsing regexes, replacing them with 100% in-memory native JVM/Minecraft signal collection (Java 21 APIs + OpenGL GPU via `GlUtil`) and SHA-256 v2 per-server UUID derivation.
+  - Removed `.instaff_token` disk persistence and server-agnostic token caching from `ClientHashScanner.java`.
+- **Localization & SSOT Documentation**:
+  - Updated `instaff.devicelock.ban_reason` in `en_us.json` and `pt_br.json` to reference client tokens instead of hardware tokens.
+  - Synchronized `ARCHITECTURE.md`, `ROADMAP.md`, `KNOWN_ISSUES.md`, and `README.md` with the hybrid token model, OP auto-bind, Multiplayer consent prompt, and aligned inspection GUIs.
+
+### Fixed
+- **Inspection GUI Alignment**: Aligned `/isinvsee` (`InvseeScreen`/`InvseeMenu`, 5-row grid) and `/isendersee` (`EnderseeScreen`/`EnderseeMenu`, 3-row grid) slot coordinates and background dimensions to exact vanilla `generic_54.png` measurements.
+
 ## [1.1.1] - 2026-09-27
 
 ### Added

@@ -2,7 +2,7 @@
 
 > **Single Source of Truth (SSOT)** for the mod's technical architecture and design decisions.
 > Every AI agent, contributor, or maintainer must read this document before modifying code.
-> **Last updated**: September 2026 — version 1.1.0
+> **Last updated**: November 2026 — version 1.1.0
 
 ---
 
@@ -14,7 +14,7 @@
 | **Name** | In-Staff |
 | **Minecraft** | 1.21.1 |
 | **Mod Loader** | NeoForge 21.1.x (FML) |
-| **Config Type** | `SERVER` (TOML, authoritative — only the server controls moderation rules) |
+| **Config Type** | `SERVER` (`instaff-server.toml`, authoritative moderation rules) + `CLIENT` (`instaff-client.toml`, local UI/privacy notice acknowledgement) |
 | **License** | CC-BY-NC-4.0 |
 | **Execution** | **Client + Server** — mod must be installed on both sides |
 | **Authentication** | Supports both **Online** (`online-mode=true`) and **Offline** (`online-mode=false`) servers |
@@ -53,21 +53,26 @@ com.tio.instaff/
 ├── InStaff.java                     ← Common entrypoint (@Mod), lifecycle bootstrapping
 ├── InStaffClient.java               ← Client entrypoint (@Mod, dist=CLIENT)
 ├── client/                          ← Client-only code (never imported by server code)
+│   ├── config/                      ← Client-only configuration (ModConfig.Type.CLIENT)
+│   │   └── InStaffClientConfig.java ← Persists one-time Multiplayer data notice acceptance
 │   ├── screen/                      ← Custom GUI screens
-│   │   ├── InvseeScreen.java        ← Client-rendered /invsee GUI
-│   │   └── EnderseeScreen.java      ← Client-rendered /endersee GUI
-│   └── integrity/                   ← Client-side integrity scanner
-│       └── ClientHashScanner.java   ← Scans local mods/ and resourcepacks/, computes SHA-256
+│   │   ├── InvseeScreen.java        ← Client-rendered /isinvsee GUI
+│   │   ├── EnderseeScreen.java      ← Client-rendered /isendersee GUI
+│   │   ├── MultiplayerConsentScreen.java  ← One-time Yes/No Multiplayer data notice screen
+│   │   └── MultiplayerConsentHandler.java ← Intercepts JoinMultiplayerScreen until accepted
+│   └── integrity/                   ← Client-side integrity scanner & hybrid token generator
+│       ├── ClientHashScanner.java   ← Scans local mods/, computes SHA-256, derives per-server token
+│       └── MachineIdFetcher.java    ← 100% in-memory native JVM/Minecraft fingerprint & SHA-256 v2 derivation
 ├── commands/                        ← Brigadier commands (server-side)
 │   ├── StaffCommand.java            ← /staff, /instaff (central administrative hub)
-│   ├── PunishCommands.java          ← /ban, /tempban, /mute, /tempmute, /kick, /freeze, /unban, /unmute
-│   ├── MaintenanceCommand.java      ← /maintenance [on|off|status|whitelist]
+│   ├── PunishCommands.java          ← /isban, /istempban, /isunban, /mute, /tempmute, /unmute, /kick, /freeze
+│   ├── MaintenanceCommand.java      ← /maintenance [on|off|status|bypass]
 │   ├── WhitelistCommand.java        ← /swhitelist [add|remove|list|reload|on|off]
-│   ├── InvseeCommand.java           ← /invsee, /endersee [player]
+│   ├── InvseeCommand.java           ← /isinvsee, /isendersee [player]
 │   ├── BanItemCommand.java          ← /banitem [add|remove|list|check]
 │   ├── HistoryCommand.java          ← /history, /checkpunish [player]
 │   ├── PlaytimeCommand.java         ← /playtime, /seen [player]
-│   └── DeviceLockCommand.java       ← /isdevice [bind|unbind|info|list] (console-gated hardware binding)
+│   └── DeviceLockCommand.java       ← /isdevice [bind|unbind|info|list] (console-gated client token binding with optional [token])
 ├── config/
 │   └── InStaffConfig.java           ← TOML server configuration specifications (ModConfig.Type.SERVER)
 ├── moderation/                      ← Punishment subsystem (server-side)
@@ -75,10 +80,11 @@ com.tio.instaff/
 │   ├── PunishmentType.java          ← Enum: BAN, TEMP_BAN, MUTE, TEMP_MUTE, FREEZE, KICK
 │   └── PunishmentRecord.java        ← POJO record: id, targetUUID, staffUUID, reason, expiry, created
 ├── access/                          ← Session & access controls (server-side)
+│   ├── ClientTokenManager.java      ← Persistent 10-char serverKey & player token ledger (instaff/client_tokens.json)
 │   ├── MaintenanceManager.java      ← Maintenance state, ping MOTD listener, kick handler
 │   ├── WhitelistManager.java        ← Dynamic whitelist store and login validator
 │   ├── PlaytimeTracker.java         ← Session timer, total playtime persistence, /seen lookup
-│   ├── DeviceLockManager.java       ← Hardware token lock coordinator, fail-closed state, command quarantine
+│   ├── DeviceLockManager.java       ← Client token lock coordinator, OP auto-bind (TOFU + /op), fail-closed state, command quarantine
 │   ├── DeviceLockRecord.java        ← POJO record: accountUUID, boundToken, boundEpoch, lastSeenEpoch
 │   └── DeviceValidationResult.java  ← Enum: NOT_APPLICABLE, CORRUPTED, NO_BINDING, MATCH, MISMATCH
 ├── inspection/                      ← Inventory & container inspection (shared menus)
@@ -91,8 +97,8 @@ com.tio.instaff/
 │   └── ChunkQuarantineHandler.java  ← Exception handler catching ticking entity/block errors
 ├── network/                         ← Network payloads (client <-> server)
 │   ├── InStaffNetwork.java          ← Payload registrar for NeoForge networking
-│   ├── IntegrityRequestPayload.java ← Server → Client: "send me your hashes"
-│   └── IntegrityResponsePayload.java← Client → Server: "here are my hashes"
+│   ├── IntegrityRequestPayload.java ← Server → Client: sends serverKey + required/blacklisted mod IDs/hashes
+│   └── IntegrityResponsePayload.java← Client → Server: "here are my hashes + derived clientToken"
 └── util/
     ├── DurationParser.java          ← Parses human duration strings ("1d12h", "30m", "7d")
     ├── LocalizationHelper.java      ← Server-side translations with en_us fallback
@@ -109,7 +115,7 @@ src/main/resources/assets/instaff/lang/
 
 | Package | Side | Rule |
 |:---|:---|:---|
-| `client/` | CLIENT only | Loaded via `InStaffClient.java` (`@Mod(dist=CLIENT)`). Server code must **never** import from `client/`. |
+| `client/` (incl. `client/config/`) | CLIENT only | Loaded via `InStaffClient.java` (`@Mod(dist=CLIENT)`); uses `ModConfig.Type.CLIENT`. Server code must **never** import from `client/`. |
 | `commands/` | SERVER only | Brigadier commands are server-authoritative. |
 | `moderation/`, `access/`, `protection/` | SERVER only | All moderation logic runs on the server. |
 | `inspection/` | BOTH | `*Menu.java` classes are shared (server creates the menu, client renders it). |
@@ -127,7 +133,7 @@ src/main/resources/assets/instaff/lang/
   - **Online Servers (`online-mode=true`)**: Standard Mojang v4 UUIDs.
   - **Offline Servers (`online-mode=false`)**: Deterministic v3 UUIDs generated via `UUIDUtil.createOfflinePlayerUUID(playerName)` (`nameUUIDFromBytes("OfflinePlayer:" + name)`).
   - **Strict Invariant — Zero External Mojang HTTP Requests**: Never query `api.mojang.com` or external web APIs. On offline servers, external APIs return Mojang account UUIDs that do NOT match the server's local deterministic UUIDs, causing bans and data to target the wrong identity.
-  - **Offline Ban Evasion Mitigation**: Because offline mode players can alter their launcher nickname to spawn with a fresh UUID, the moderation engine supports combining UUID bans with IP bans and client-side installation tokens exchanged during the `IntegrityResponsePayload` handshake.
+  - **Offline Ban Evasion Mitigation**: Because offline mode players can alter their launcher nickname to spawn with a fresh UUID, the moderation engine supports combining UUID bans with IP bans and hybrid per-server client tokens (`serverKey` + in-memory native JVM/Minecraft fingerprint, persisted in `instaff/client_tokens.json`) exchanged during the `IntegrityResponsePayload` handshake.
 - **Data Location & Storage Limits**: 
   - All JSON data (like `punishments_history.json` and `playtime.json`) is stored in the **server root directory** (`<server_root>/instaff/`), NOT inside the `world/` folder. Backups must include this root folder.
   - The JSON stores are completely rewritten to disk (`.tmp` atomic swap) on every save. There is currently no size limit, rotation, archival, or schema versioning (missing fields use Gson defaults).
@@ -176,7 +182,7 @@ src/main/resources/assets/instaff/lang/
 
 ### 3.5 Client Integrity & Anti-Cheat (`network/`)
 
-The client integrity system verifies that connecting clients are running an approved set of mods and resource packs.
+The client integrity system verifies that connecting clients are running an approved set of mods and derives a server-scoped hybrid client installation token.
 
 #### Handshake Flow
 
@@ -186,24 +192,28 @@ The client integrity system verifies that connecting clients are running an appr
 └─────┬────┘                              └─────┬────┘
       │  1. Player joins (post-login)           │
       │────── IntegrityRequestPayload ─────────>│
-      │       (server sends list of required    │
-      │        + blacklisted mod IDs/hashes)    │
+      │       (server sends serverKey +         │
+      │        required/blacklisted mod lists)  │
       │                                         │
       │                          2. Client scans│
-      │                          local mods/ and│
-      │                          resourcepacks/ │
-      │                          computes SHA-256│
-      │                          per file       │
+      │                          local mods/ for│
+      │                          SHA-256 hashes,│
+      │                          collects JVM/MC│
+      │                          signals in RAM,│
+      │                          derives SHA-256│
+      │                          clientToken    │
       │                                         │
       │<───── IntegrityResponsePayload ─────────│
       │       (client sends back manifest:      │
       │        filename → SHA-256 hash, plus    │
-      │        an installation token)           │
+      │        per-server clientToken)          │
       │                                         │
-      │  3. Server validates:                   │
-      │     - Required mods present?            │
-      │     - Blacklisted mods absent?          │
-      │     - Known X-Ray/cheat hashes?         │
+      │  3. Server persists token record to     │
+      │     instaff/client_tokens.json and      │
+      │     validates:                          │
+      │     - Ban Evasion (IP OR Token)         │
+      │     - Staff Device Lock (OP Auto-Bind)  │
+      │     - Required / blacklisted mods       │
       │                                         │
       │  4a. PASS → allow play                  │
       │  4b. FAIL → disconnect with reason      │
@@ -222,30 +232,33 @@ The client integrity system verifies that connecting clients are running an appr
 
 #### Security Notes
 
-- **Payload Bounds & Negotiation:** The integrity response payload is strictly bounded (`MAX_ENTRIES = 4096`, `MAX_STRING_LENGTH = 512`) to prevent memory exhaustion by malicious clients. There is no payload version negotiation; mismatched versions will fail unpredictably.
-- **Installation Token:** The `IntegrityResponsePayload` passes a client token which is saved in `PunishmentRecord`s. This deters offline ban evasion by matching tokens on future connections.
-- The hash scan runs on the **client JVM** and the server trusts the response. A determined cheater could patch the mod to lie. This is a **deterrent**, not a cryptographic proof. It raises the bar significantly beyond "just install X-Ray".
+- **Payload Bounds & Negotiation:** The integrity response payload is strictly bounded (`MAX_ENTRIES = 4096`, `MAX_STRING_LENGTH = 512`) to prevent memory exhaustion by malicious clients. `IntegrityRequestPayload` bounds `serverKey` to 64 chars. There is no payload version negotiation; mismatched versions will fail unpredictably.
+- **Hybrid Client Token (50% Server / 50% Client):** On boot, `ClientTokenManager` loads or generates a random 10-character alphanumeric `serverKey` (`SecureRandom`) in `instaff/client_tokens.json`. On the client, `MachineIdFetcher` collects native JVM/Minecraft signals strictly in memory (CPU/arch/cores, physical RAM, disk capacity, OS/user, OpenGL GPU via `GlUtil`) — with zero external OS processes (`ProcessBuilder`), zero `/etc/machine-id` reads, and zero `.instaff_token` files written to disk — and derives `SHA-256("instaff-token-v2:" + serverKey + "|" + nativeFingerprint)` as a 36-char UUID. Distinct `serverKey`s isolate tokens across servers, and raw signals are never logged or transmitted.
+- **One-Time Multiplayer Consent Prompt:** Before opening `JoinMultiplayerScreen`, `MultiplayerConsentHandler` intercepts `ScreenEvent.Opening` and presents `MultiplayerConsentScreen` (Yes / No) explaining that mod IDs, SHA-256 file hashes, and the per-server hashed token are sent strictly to the connected server. Acceptance is stored in `config/instaff-client.toml` (`[privacy] multiplayerNoticeAccepted`).
+- The hash scan runs on the **client JVM** (`InStaff-Integrity-Scanner` daemon thread) and the server trusts the response. A determined cheater could patch the mod to lie. This is a **deterrent**, not a cryptographic proof. It raises the bar significantly beyond "just install X-Ray".
 - For higher security, combine with server-side detection (ore mining pattern analysis, movement anomaly detection).
 
 ### 3.6 Staff Device Lock Subsystem (`access/`)
 
-The Staff Device Lock binds high-value accounts (OP level >= 2) to a specific, console-authorized client hardware installation token.
+The Staff Device Lock binds high-value accounts (OP level >= 2) to a specific client installation token.
 
-#### Core Flow and Command Quarantine
+#### Core Flow, OP Auto-Bind, and Command Quarantine
 
 1. **Pre-Verification Quarantine (`pendingDeviceLocks`)**:
    - On `PlayerLoggedInEvent`, if `deviceLockEnabled` is true, the player has OP level >= 2, and an active binding exists, the player's UUID is placed into `pendingDeviceLocks`.
    - While quarantined, all commands from the player are cancelled in `ModerationEventHandler.onCommandEvent` with `instaff.security.pending_device_verification`.
    - Non-staff, unbound accounts, and logins when `deviceLockEnabled = false` are never quarantined.
-2. **Handshake Verification**:
+2. **Handshake Verification & OP Auto-Bind (TOFU)**:
    - Evaluated in `ServerIntegrityValidator.handleResponse()` immediately after the ban evasion check.
    - Clears `pendingDeviceLocks` inline on **all 5 terminal outcomes** (`NOT_APPLICABLE`, `CORRUPTED`, `NO_BINDING`, `MATCH`, `MISMATCH`).
+   - **Auto-Bind on First Handshake (TOFU)**: when an OP account (`isStaff == true`, `deviceLockEnabled == true`, `!isCorruptedState`) has no existing binding (`record == null`) and presents a non-blank token, `DeviceLockManager.validateAndRecord()` automatically binds the account via `bindDirect(...)` and returns `MATCH`.
+   - **Immediate Auto-Bind on `/op <player>`**: `AccessEventHandler.onCommandEvent` (`EventPriority.LOWEST`) intercepts valid `/op` commands (from console or permission level 3+ OPs) and calls `DeviceLockManager.tryAutoBindOnOp(...)`, immediately binding any unbound target whose token is already recorded in `ClientTokenManager` (or `ServerIntegrityValidator.getKnownClientToken`).
    - `MATCH`: updates `lastSeenEpoch` and allows normal connection.
    - `MISMATCH`: automatically issues permanent ban via `PunishmentManager`, kicks the player, and broadcasts an alert (`instaff.devicelock.staff_alert`) with truncated token to online staff.
    - `CORRUPTED`: fail-closed state rejecting OP logins with an error message and backup creation.
-3. **Console-Only Administrative Interface**:
-   - `/isdevice bind <player> <token>`: restricted strictly to console (`source.getEntity() == null`).
-   - `/isdevice unbind <player>`: console-only.
+3. **Console-Only Administrative Interface & Recovery**:
+   - `/isdevice bind <player> [token]`: restricted strictly to console (`source.getEntity() == null`). When `[token]` is omitted, looks up the player's latest token in `ClientTokenManager` (falling back to `ServerIntegrityValidator`), failing with `instaff.command.devicelock.no_known_token` if none is recorded.
+   - `/isdevice unbind <player>`: console-only. Used with `/isunban <player>` for staff PC-change recovery so the next login auto-binds the new token via TOFU.
    - `/isdevice info <player>` and `/isdevice list`: accessible to staff (OP level >= 2).
 
 ---

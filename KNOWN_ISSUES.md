@@ -17,7 +17,7 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 
 ### 1. Anti-Cheat & Client Integrity Bypasses
 * `[Pending Testing]` — **Mod Spoofing:** A sophisticated user could compile a cheat client into a custom `.jar` and change the internal mod ID to match something benign (e.g., `jei`) to bypass both the blacklist and the hash check.
-* `[Resolved]` — **Token Scrubbing:** Resolved via deterministic client-side machine ID fallback using SHA-256 (`MachineIdFetcher`). If `.instaff_token` is deleted, the token is deterministically regenerated from OS hardware identifiers (`MachineGuid` on Windows, `/etc/machine-id` on Linux, `IOPlatformUUID` on macOS). Configurable offline evasion modes provided via `banEvasionMode` (`STRICT`, `IP_ONLY`, `TOKEN_ONLY`, `OFF`).
+* `[Resolved]` — **Token Scrubbing:** Resolved via the hybrid 50% server / 50% client token architecture (`ClientTokenManager` + `MachineIdFetcher`). The client derives a deterministic SHA-256 UUID token in memory from the server's persistent 10-char `serverKey` (`instaff/client_tokens.json`) and native JVM/Minecraft host signals (`GlUtil`, Java 21 APIs) — with zero local token files, zero OS subprocesses, and zero OS machine-id file reads. Deleting the `.minecraft` folder no longer resets a player's server token. Configurable offline evasion modes provided via `banEvasionMode` (`STRICT`, `IP_ONLY`, `TOKEN_ONLY`, `OFF`).
 * `[Confirmed]` — **Payload Versioning:** There is no payload version negotiation during the integrity handshake. Mismatched client/server versions will fail unpredictably (decoder exceptions) rather than providing a clean disconnect message to the player.
 
 ### 2. Inventory Inspection (`/invsee`) Concurrency
@@ -37,7 +37,7 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 * `[Confirmed]` — **Punishment Overwrite Audit Pollution (Mute/Ban Stacking):** Executing `/mute`, `/tempmute`, `/ban`, or `/tempban` on an already sanctioned player overwrites the in-memory active map, but does not mark the previous record as revoked in `punishments_history.json`. As a result, multiple active sanctions for the same player display as `[ACTIVE]` concurrently in `/history`.
 
 ### 6. Client Rendering & Visuals
-* `[Confirmed]` — **GUI Misalignment in `/invsee`:** The slot placement coordinates for the target's inventory (armor, offhand, main) and the staff's own inventory do not align perfectly with the background container texture.
+* `[Resolved]` — **GUI Misalignment in `/isinvsee` and `/isendersee`:** Aligned `InvseeScreen`/`InvseeMenu` (5-row grid: `imageHeight = 204`, `inventoryLabelY = 110`, target main/hotbar at `y = 36` / `90`, staff inv at `y = 121`) and `EnderseeScreen`/`EnderseeMenu` (3-row grid: `imageHeight = 168`, `inventoryLabelY = 74`, staff inv at `y = 85`) to exact vanilla `generic_54.png` pixel coordinates.
 
 ### 7. Scalability & Performance
 * `[Confirmed]` — **Unbounded JSON Growth & Full File Rewrite:** `punishments_history.json` and `playtime.json` are completely rewritten to disk (`.tmp` swap) on every save. There is no rotation or archival limit, meaning write times will increase linearly as the server ages.
@@ -52,8 +52,7 @@ The purpose of this file is to document suspected issues, potential bypasses, an
 * `[Confirmed]` — **Late Kick on Maintenance and Smart Whitelist:** Unlike bans (which were moved to `PunishmentCheckConfigurationTask` during the configuration handshake), `MaintenanceManager` and `WhitelistManager` checks are still evaluated in `AccessEventHandler`'s `PlayerLoggedInEvent`. As a result, non-whitelisted players or non-staff players during maintenance briefly appear in the world and trigger join broadcasts before being disconnected. Needs migration to configuration phase tasks.
 
 ### 10. Staff Device Lock (Accepted Limitations & Operational UX)
-* `[Confirmed]` — **Transient Hardware Query False Positive:** A rare OS-level hardware query failure on a bound staff member's client may cause a fallback token mismatch and an automatic ban. Given the small number of protected OP accounts, resolution is manual (console unban + re-bind).
-* `[Confirmed]` — **Unbound Accounts Unprotected:** Enabling `deviceLockEnabled = true` is deliberately opt-in per staff account. Staff accounts without a console binding via `/isdevice bind` connect normally without hardware token validation.
+* `[Confirmed]` — **Unbound Accounts & Opt-In Protection:** Enabling `deviceLockEnabled = true` only protects OP accounts once bound. Unbound OP accounts are automatically bound on first verified handshake (TOFU) or immediately upon `/op <player>` when a recorded token exists in `ClientTokenManager`; accounts promoted without any prior recorded token remain unprotected until their first verified handshake or console `/isdevice bind`.
 * `[Confirmed]` — **Quarantine Scope (Command-Only):** The pre-verification quarantine blocks `CommandEvent` to prevent unauthorized administrative escalation (`/stop`, `/op`, `/give`, etc.), but does not cancel physical world interactions (movement, block placing/breaking).
 * `[Confirmed]` — **Pre-Verification Window Expected UX:** Every login by a bound staff account undergoes a brief command quarantine (typically 50–200ms, up to `integrityTimeoutSeconds` on slow connections). This is normal operating behavior and not a thread hang.
 * `[Confirmed]` — **Unbounded Storage Growth:** `device_locks.json` uses atomic full rewrite on change, but file size growth is negligible because only OP accounts are registered.

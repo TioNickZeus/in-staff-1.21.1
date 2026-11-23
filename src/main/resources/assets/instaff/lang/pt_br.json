@@ -89,7 +89,7 @@
   "instaff.command.playtime.other": "§aTempo total de jogo de §e%s§a: §e%s §7(Status: %s§7)",
   "instaff.command.seen.result": "§bInformações de atividade de §e%s§b:\n§7Status: %s\n§7Visto pela última vez: §f%s\n§7Primeira entrada: §f%s\n§7Tempo total jogado: §e%s",
   "instaff.security.pending_device_verification": "§cValidando credenciais do dispositivo, aguarde...",
-  "instaff.devicelock.ban_reason": "Conta Comprometida / Token de Hardware Incompatível",
+  "instaff.devicelock.ban_reason": "Conta Comprometida / Token de Cliente Incompatível",
   "instaff.devicelock.staff_alert": "§c[ALERTA DE SEGURANÇA] §eA conta de staff §f%s §ctentou conectar de uma máquina não autorizada (Token: §7%s§c)! A conta foi banida automaticamente.",
   "instaff.devicelock.corrupted_disconnect": "§cBanco de dados de segurança corrompido. Contate a administração.",
   "instaff.command.devicelock.bound": "§aConta de staff §e%s §avinculada com sucesso ao token §7%s§a.",

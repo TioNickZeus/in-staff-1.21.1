@@ -89,7 +89,7 @@
   "instaff.command.playtime.other": "§aTotal playtime for §e%s§a: §e%s §7(Status: %s§7)",
   "instaff.command.seen.result": "§bPlayer §e%s §bactivity info:\n§7Status: %s\n§7Last Seen: §f%s\n§7First Joined: §f%s\n§7Total Playtime: §e%s",
   "instaff.security.pending_device_verification": "§cValidating device credentials, please wait...",
-  "instaff.devicelock.ban_reason": "Account Compromise / Hardware Token Mismatch",
+  "instaff.devicelock.ban_reason": "Account Compromise / Client Token Mismatch",
   "instaff.devicelock.staff_alert": "§c[SECURITY ALERT] §eStaff account §f%s §cattempted login from an unauthorized machine (Token: §7%s§c)! Account has been auto-banned.",
   "instaff.devicelock.corrupted_disconnect": "§cSecurity database corrupted. Contact server administration.",
   "instaff.command.devicelock.bound": "§aSuccessfully bound staff account §e%s §ato device token §7%s§a.",
