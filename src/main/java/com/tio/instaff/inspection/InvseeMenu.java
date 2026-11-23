@@ -77,17 +77,17 @@ public class InvseeMenu extends AbstractContainerMenu {
         // 3. Target Main Inventory (slots 9 to 35) -> 3 rows of 9
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
-                this.addSlot(new Slot(targetContainer, 9 + col + (row * 9), 8 + (col * 18), 40 + (row * 18)));
+                this.addSlot(new Slot(targetContainer, 9 + col + (row * 9), 8 + (col * 18), 36 + (row * 18)));
             }
         }
 
         // 4. Target Hotbar (slots 0 to 8) -> 1 row of 9
         for (int col = 0; col < 9; col++) {
-            this.addSlot(new Slot(targetContainer, col, 8 + (col * 18), 98));
+            this.addSlot(new Slot(targetContainer, col, 8 + (col * 18), 90));
         }
 
         // 5. Staff Player Main Inventory (3 rows of 9)
-        int staffInvYStart = 130;
+        int staffInvYStart = 121;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(staffInventory, 9 + col + (row * 9), 8 + (col * 18), staffInvYStart + (row * 18)));

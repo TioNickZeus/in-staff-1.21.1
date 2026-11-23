@@ -74,7 +74,7 @@ public class EnderseeMenu extends AbstractContainerMenu {
         }
 
         // 2. Staff Player Main Inventory (3 rows of 9)
-        int staffInvYStart = 84;
+        int staffInvYStart = 85;
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 9; col++) {
                 this.addSlot(new Slot(staffInventory, 9 + col + (row * 9), 8 + (col * 18), staffInvYStart + (row * 18)));
