@@ -1,16 +1,20 @@
 package com.tio.instaff;
 
 import com.mojang.logging.LogUtils;
+import com.tio.instaff.client.config.InStaffClientConfig;
 import com.tio.instaff.client.integrity.ClientHashScanner;
 import com.tio.instaff.client.screen.EnderseeScreen;
 import com.tio.instaff.client.screen.InvseeScreen;
+import com.tio.instaff.client.screen.MultiplayerConsentHandler;
 import com.tio.instaff.inspection.ModMenus;
 import com.tio.instaff.network.InStaffNetwork;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import org.slf4j.Logger;
 
 /**
@@ -29,8 +33,12 @@ public final class InStaffClient {
     public InStaffClient(IEventBus modEventBus, ModContainer modContainer) {
         LOGGER.info("In-Staff client module initializing");
 
-        // Register client screens
+        // Register client config (privacy/consent preferences)
+        modContainer.registerConfig(ModConfig.Type.CLIENT, InStaffClientConfig.SPEC);
+
+        // Register client screens and multiplayer consent prompt
         modEventBus.addListener(RegisterMenuScreensEvent.class, this::registerScreens);
+        NeoForge.EVENT_BUS.addListener(MultiplayerConsentHandler::onScreenOpening);
 
         // Register client integrity scanner handler
         InStaffNetwork.clientRequestHandler = ClientHashScanner::handleIntegrityRequest;
