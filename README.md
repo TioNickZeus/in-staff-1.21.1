@@ -14,7 +14,7 @@ Designed specifically for modded servers where both the server and players run N
 - **Offline Server (`online-mode=false`) Compatibility**:
   - Deterministic UUID resolution via `UUIDUtil.createOfflinePlayerUUID(username)`.
   - Zero external Mojang HTTP API calls (`api.mojang.com`), preventing identity collisions and rate limiting.
-  - Mitigates offline ban evasion by binding persistent client installation tokens (`.instaff_token`) and IP addresses to punishment records.
+  - Mitigates offline ban evasion by binding server-scoped client installation tokens (`instaff/client_tokens.json`) and IP addresses to punishment records.
 - **Atomic File Persistence**: All data is written with temporary `.tmp` file swaps (`Files.move(REPLACE_EXISTING, ATOMIC_MOVE)`), preventing corrupt or half-written JSON files during abrupt shutdowns.
 - **Zero Server Crash Policy (Chunk Quarantine)**: Isolates and logs corrupted ticking entities and block entities directly into `instaff/quarantine.log` instead of crashing the server.
 - **Bidirectional Live & Offline Inspection**: Inspect player inventories (41 slots) and Ender Chests (27 slots) in real-time or modify offline playerdata (`world/playerdata/<UUID>.dat`) directly with atomic safety.
@@ -53,8 +53,8 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 | `/playtime` | None | Everyone | Shows the sender's total accumulated server playtime. |
 | `/playtime` | `<player>` | OP Level 2 | Shows accumulated playtime and current online status of target player. |
 | `/seen` | `<player>` | OP Level 2 | Shows telemetry info: status, last seen date/time, first join, and total playtime. |
-| `/isdevice bind` | `<player> <token>` | Console Only | Binds a staff member's account to an authorized hardware installation token. |
-| `/isdevice unbind` | `<player>` | Console Only | Removes an existing hardware device binding for a staff account. |
+| `/isdevice bind` | `<player> [token]` | Console Only | Binds a staff member's account to an authorized client installation token (auto-lookup if omitted). |
+| `/isdevice unbind` | `<player>` | Console Only | Removes an existing device binding for a staff account. |
 | `/isdevice info` | `<player>` | OP Level 2 | Displays device binding info (truncated token, bound date, last seen). |
 | `/isdevice list` | None | OP Level 2 | Lists all currently bound staff accounts and their last seen telemetry. |
 
@@ -72,7 +72,7 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 ```
 - **Duration syntax**: Supports composite strings such as `30m`, `2h`, `1d12h`, `7d`, `1w`, `1mo`, `1y`.
 - **Offline support**: Works seamlessly on offline players by resolving local deterministic UUIDs.
-- **Offline Ban Evasion**: Records player IP and client hardware installation token (`.instaff_token`) to prevent players from bypassing bans by simply changing their nickname in offline launchers.
+- **Offline Ban Evasion**: Records player IP and server-scoped client installation token (`instaff/client_tokens.json`) to prevent players from bypassing bans by simply changing their nickname in offline launchers.
 - **Broadcast**: Automatically broadcasts disciplinary actions to online players when `broadcastPunishments = true`.
 
 #### 2. Chat Mute & Temporary Mute
@@ -122,7 +122,7 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 #### 3. Staff Device Lock (`/isdevice`)
 ```text
 # Console only:
-/isdevice bind <player> <token>
+/isdevice bind <player> [token]
 /isdevice unbind <player>
 
 # OP level 2+:
@@ -130,7 +130,8 @@ All administrative commands require **OP level 2** permissions, except `/playtim
 /isdevice list
 ```
 - Hardens OP-level accounts against nickname impersonation and credential theft on offline servers (`online-mode=false`).
-- **Console-Gated Binding**: Only the server console can register or update device bindings, preventing in-game TOFU hijack attacks.
+- **OP Auto-Bind (TOFU & `/op`)**: When `deviceLockEnabled = true`, unbound OP accounts are automatically bound on their first verified handshake (TOFU), or immediately upon `/op <player>` if a recorded token already exists in `instaff/client_tokens.json`.
+- **Console-Gated Manual Binding & Recovery**: Only the server console can run `/isdevice bind <player> [token]` (omitting `[token]` looks up the player's latest recorded token) or `/isdevice unbind <player>`. If staff change PCs, run `/isunban <player>` and `/isdevice unbind <player>` from console so the next login auto-binds the new token.
 - **Pre-Verification Command Quarantine**: When enabled (`deviceLockEnabled = true`), bound staff accounts have their commands quarantined upon join until the client installation token is verified via the Play-phase integrity handshake.
 - **Automatic Ban on Impersonation**: Attempted logins presenting mismatched tokens are auto-banned permanently and online staff receive immediate broadcast alerts.
 
@@ -207,8 +208,8 @@ The server configuration file is located at `world/serverconfig/instaff-server.t
 [moderation]
     # Broadcast punishments (bans, mutes, kicks) to all players
     broadcastPunishments = true
-    # Mitigate offline ban evasion using IP and client installation token matching
-    preventOfflineBanEvasion = true
+    # Offline ban evasion mode: STRICT, IP_ONLY, TOKEN_ONLY, OFF
+    banEvasionMode = "STRICT"
     # Default duration when omitted in mutes
     defaultMuteDuration = "1h"
     # Maximum allowed temporary ban duration in days
@@ -239,7 +240,13 @@ The server configuration file is located at `world/serverconfig/instaff-server.t
     blacklistedHashes = []
     # Blacklisted mod IDs (e.g. cheat mods)
     blacklistedModIds = ["xray", "freecam", "baritone"]
+
+[security]
+    # Bind OP level 2+ accounts to a specific client installation token
+    deviceLockEnabled = false
 ```
+
+Client preferences are stored in `config/instaff-client.toml` (`[privacy] multiplayerNoticeAccepted = false`), tracking whether the player has acknowledged the one-time Multiplayer data notice.
 
 ---
 
@@ -248,6 +255,8 @@ The server configuration file is located at `world/serverconfig/instaff-server.t
 All persistent data is stored in JSON format inside the server root's `instaff/` directory:
 
 - `instaff/punishments_history.json` - Complete audit trail of all issued sanctions and revocations.
+- `instaff/client_tokens.json` - Persistent 10-character `serverKey` and per-player client token records.
+- `instaff/device_locks.json` - Staff account-to-client-token security bindings.
 - `instaff/maintenance.json` - Maintenance status and staff bypass UUID list.
 - `instaff/whitelist.json` - Smart Whitelist configuration and whitelisted UUID/name pairs.
 - `instaff/banned_items.json` - Restricted item IDs and their active restriction modes.
@@ -263,16 +272,16 @@ mod's developer, to any third party, or to any external service. All data descri
 below is collected, stored, and controlled entirely by the individual server owner 
 and their hosting provider — not by the mod's author.
 
-In-Staff collects the following data from connecting clients to support moderation 
-and anti-ban-evasion features:
+On the first attempt to enter Multiplayer, In-Staff displays a one-time notice (`Yes, Continue` / `No, Back to Menu`, saved in `config/instaff-client.toml`) informing the player of the data sent strictly to the connected server:
 
-- **Mod/resource pack integrity**: SHA-256 hashes of files in your `mods/` and 
-  `resourcepacks/` folders (not the files themselves), compared against server-defined 
-  whitelists/blacklists.
-- **Installation token**: a persistent identifier used to deter offline ban evasion. 
-  Derived from an OS installation identifier (or a random UUID fallback) and hashed 
-  with SHA-256 on the client before transmission. The server never receives or 
-  stores raw identifiers — only the one-way cryptographic hash.
+- **Mod integrity**: loaded mod IDs and SHA-256 hashes of `.jar` files in your `mods/` 
+  folder (not the files themselves), compared against server-defined whitelists/blacklists.
+- **Hybrid client token**: an anonymous UUID-formatted identifier used to deter offline 
+  ban evasion and protect staff accounts. Derived in memory on the client by hashing 
+  the server's random 10-character `serverKey` together with native JVM/Minecraft signals 
+  using SHA-256. No external OS commands or `/etc/machine-id` reads are performed, no local 
+  token file is written on the client, raw signals never leave memory or get logged, and 
+  different servers receive different tokens.
 - **IP address**: standard for any Minecraft server connection, additionally logged 
   alongside punishment records to deter ban evasion.
 
@@ -314,7 +323,7 @@ The compiled artifact will be located in:
 build/libs/instaff-<version>.jar
 ```
 
-To run the automated test suite (47 tests covering all modules):
+To run the automated test suite (87 tests covering all modules):
 ```powershell
 ./gradlew test
 ```
