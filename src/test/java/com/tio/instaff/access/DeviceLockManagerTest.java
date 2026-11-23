@@ -1,6 +1,7 @@
 package com.tio.instaff.access;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.ParseResults;
 import com.mojang.brigadier.tree.CommandNode;
 import com.tio.instaff.commands.DeviceLockCommand;
 import com.tio.instaff.util.FileStorageUtil;
@@ -47,12 +48,14 @@ class DeviceLockManagerTest {
     void setUp() {
         manager = DeviceLockManager.getInstance();
         manager.resetForTesting();
+        ClientTokenManager.getInstance().resetForTesting();
         DeviceLockManager.setConfigOverrideForTesting(true);
     }
 
     @AfterEach
     void tearDown() {
         manager.resetForTesting();
+        ClientTokenManager.getInstance().resetForTesting();
         DeviceLockManager.setConfigOverrideForTesting(null);
     }
 
@@ -67,13 +70,16 @@ class DeviceLockManagerTest {
     }
 
     @Test
-    @DisplayName("TC-02: Staff account connects, no binding exists -> NO_BINDING, not quarantined")
-    void testTC02_StaffNoBinding() {
+    @DisplayName("TC-02: Staff account connects with no existing binding and valid token -> TOFU auto-bind, MATCH, not quarantined")
+    void testTC02_StaffNoBindingTofuAutoBind() {
         UUID uuid = UUID.randomUUID();
         DeviceValidationResult result = manager.validateAndRecord(uuid, "StaffPlayer", "token-staff", true);
 
-        assertEquals(DeviceValidationResult.NO_BINDING, result);
-        assertFalse(manager.isPendingDeviceLock(uuid), "Unbound staff account must not be quarantined");
+        assertEquals(DeviceValidationResult.MATCH, result);
+        assertFalse(manager.isPendingDeviceLock(uuid), "Unbound staff account must not be quarantined after TOFU");
+        assertTrue(manager.hasBinding(uuid), "TOFU auto-bind must persist a device binding");
+        assertEquals("token-staff", manager.getRecord(uuid).orElseThrow().getBoundToken());
+        assertEquals(DeviceValidationResult.MISMATCH, manager.validateAndRecord(uuid, "StaffPlayer", "different-token", true));
     }
 
     @Test
@@ -149,12 +155,18 @@ class DeviceLockManagerTest {
         assertFalse(manager.isPendingDeviceLock(uuid3), "CORRUPTED must clear pending flag");
         manager.setCorruptedStateForTesting(false);
 
-        // 4. NO_BINDING
+        // 4. NO_BINDING (unbound staff with missing/blank token) and TOFU MATCH (unbound staff with valid token)
         UUID uuid4 = UUID.randomUUID();
         manager.markPendingForTesting(uuid4);
-        DeviceValidationResult res4 = manager.validateAndRecord(uuid4, "Staff4", "tok4", true);
+        DeviceValidationResult res4 = manager.validateAndRecord(uuid4, "Staff4", "   ", true);
         assertEquals(DeviceValidationResult.NO_BINDING, res4);
         assertFalse(manager.isPendingDeviceLock(uuid4), "NO_BINDING must clear pending flag");
+
+        UUID uuid5 = UUID.randomUUID();
+        manager.markPendingForTesting(uuid5);
+        DeviceValidationResult res5 = manager.validateAndRecord(uuid5, "Staff5", "tok5", true);
+        assertEquals(DeviceValidationResult.MATCH, res5);
+        assertFalse(manager.isPendingDeviceLock(uuid5), "TOFU MATCH must clear pending flag");
     }
 
     @Test
@@ -255,5 +267,89 @@ class DeviceLockManagerTest {
 
         assertEquals(loginPathResult, handshakePathResult);
         assertFalse(loginPathResult);
+    }
+
+    @Test
+    @DisplayName("TC-11: Recovery workflow after unbind allows TOFU re-bind on next staff handshake")
+    void testTC11_RecoveryWorkflowAfterUnbind() {
+        UUID staffUUID = UUID.randomUUID();
+        manager.bindDirect(staffUUID, "RecoverAdmin", "old-pc-token");
+
+        assertTrue(manager.unbindDirect(staffUUID));
+        assertFalse(manager.hasBinding(staffUUID));
+
+        DeviceValidationResult rebound = manager.validateAndRecord(staffUUID, "RecoverAdmin", "new-pc-token", true);
+        assertEquals(DeviceValidationResult.MATCH, rebound);
+        assertTrue(manager.hasBinding(staffUUID));
+        assertEquals("new-pc-token", manager.getRecord(staffUUID).orElseThrow().getBoundToken());
+        assertEquals(DeviceValidationResult.MISMATCH, manager.validateAndRecord(staffUUID, "RecoverAdmin", "old-pc-token", true));
+    }
+
+    @Test
+    @DisplayName("TC-12: Immediate auto-bind on /op binds known tokens and respects all safety guards")
+    void testTC12_TryAutoBindOnOpGuardsAndPersistence() {
+        UUID newOpUuid = UUID.randomUUID();
+        ClientTokenManager.getInstance().recordPlayerToken(newOpUuid, "PromotedOp", "recorded-token-123");
+
+        assertTrue(manager.tryAutoBindOnOp(newOpUuid, "PromotedOp"));
+        assertTrue(manager.hasBinding(newOpUuid));
+        assertEquals("recorded-token-123", manager.getRecord(newOpUuid).orElseThrow().getBoundToken());
+
+        // Existing binding must never be overwritten
+        assertFalse(manager.tryAutoBindOnOp(newOpUuid, "PromotedOp", "different-token-456"));
+        assertEquals("recorded-token-123", manager.getRecord(newOpUuid).orElseThrow().getBoundToken());
+
+        // Unknown token must be a no-op
+        UUID noTokenUuid = UUID.randomUUID();
+        assertFalse(manager.tryAutoBindOnOp(noTokenUuid, "NoTokenPlayer"));
+        assertFalse(manager.hasBinding(noTokenUuid));
+
+        // Disabled feature must be a no-op
+        UUID disabledUuid = UUID.randomUUID();
+        ClientTokenManager.getInstance().recordPlayerToken(disabledUuid, "DisabledOp", "token-disabled");
+        DeviceLockManager.setConfigOverrideForTesting(false);
+        assertFalse(manager.tryAutoBindOnOp(disabledUuid, "DisabledOp"));
+        assertFalse(manager.hasBinding(disabledUuid));
+        DeviceLockManager.setConfigOverrideForTesting(true);
+
+        // Corrupted database must fail closed and never create bindings
+        UUID corruptedUuid = UUID.randomUUID();
+        ClientTokenManager.getInstance().recordPlayerToken(corruptedUuid, "CorruptedOp", "token-corrupted");
+        manager.setCorruptedStateForTesting(true);
+        assertFalse(manager.tryAutoBindOnOp(corruptedUuid, "CorruptedOp"));
+        assertFalse(manager.hasBinding(corruptedUuid));
+        manager.setCorruptedStateForTesting(false);
+    }
+
+    @Test
+    @DisplayName("TC-13: /isdevice bind <player> [token] accepts optional token in Brigadier and fails cleanly when no token is recorded")
+    void testTC13_OptionalTokenInBindCommand() throws Exception {
+        CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
+        DeviceLockCommand.register(dispatcher);
+
+        CommandSourceStack consoleSource = new CommandSourceStack(
+                CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, null, 4, "Server",
+                Component.literal("Server"), null, null
+        );
+
+        ParseResults<CommandSourceStack> withoutToken = dispatcher.parse("isdevice bind TargetAdmin", consoleSource);
+        assertTrue(withoutToken.getExceptions().isEmpty(), "/isdevice bind <player> without token must parse cleanly");
+        assertFalse(withoutToken.getReader().canRead(), "All input must be consumed when token is omitted");
+
+        ParseResults<CommandSourceStack> withToken = dispatcher.parse("isdevice bind TargetAdmin manual-token", consoleSource);
+        assertTrue(withToken.getExceptions().isEmpty(), "/isdevice bind <player> <token> with explicit token must parse cleanly");
+        assertFalse(withToken.getReader().canRead(), "All input must be consumed when token is supplied");
+
+        // Ensure Bootstrap is initialized before LocalizationHelper is invoked by executeBind failure path
+        try {
+            java.lang.reflect.Field field = net.minecraft.server.Bootstrap.class.getDeclaredField("isBootstrapped");
+            field.setAccessible(true);
+            field.setBoolean(null, true);
+        } catch (Throwable ignored) {
+        }
+
+        int result = dispatcher.execute("isdevice bind UnknownNoTokenPlayer", consoleSource);
+        assertEquals(0, result, "/isdevice bind without token must return 0 when no recorded token exists");
+        assertFalse(manager.hasBinding(com.tio.instaff.util.PlayerResolver.createOfflineUUID("UnknownNoTokenPlayer")));
     }
 }

@@ -91,6 +91,7 @@
   "instaff.command.devicelock.bound": "§aSuccessfully bound staff account §e%s §ato device token §7%s§a.",
   "instaff.command.devicelock.unbound": "§aRemoved device binding for staff account §e%s§a.",
   "instaff.command.devicelock.not_bound": "§cStaff account §e%s §cis not bound to any device token.",
+  "instaff.command.devicelock.no_known_token": "§cNo recorded client token found for player §e%s§c. Specify a token manually or wait for them to connect first.",
   "instaff.command.devicelock.info": "§bDevice Lock Info for §e%s§b:\n§7Bound Token: §f%s\n§7Bound Date: §f%s\n§7Last Seen: §f%s",
   "instaff.command.devicelock.list.header": "§b=== Bound Staff Accounts (§e%d§b) ===",
   "instaff.command.devicelock.list.entry": "§e%s §7- Token: §f%s §7(Last seen: §f%s§7)",
